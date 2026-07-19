@@ -82,7 +82,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "PalTrade — Forex Analysis & AI Mentor" },
       { property: "og:description", content: "Beginner forex classes, market analysis, and an AI trading mentor in one dark, focused workspace." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "/" },
+      { property: "og:site_name", content: "PalTrade" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "PalTrade — Forex Analysis & AI Mentor" },
+      { name: "twitter:description", content: "Beginner forex classes, market analysis, and an AI trading mentor in one dark, focused workspace." },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "PalTrade",
+          description: "Forex analysis platform with beginner classes and an AI trading mentor.",
+          url: "/",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "PalTrade",
+          url: "/",
+        }),
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },

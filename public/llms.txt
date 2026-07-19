@@ -1,0 +1,9 @@
+# PalTrade
+
+> Forex analysis platform with beginner classes, strategy backtesting, and an AI trading mentor.
+
+## Pages
+
+- [Home](/): Overview of PalTrade with live-style market ticker, beginner classes, and the AI mentor chat.
+- [Backtest](/backtest): Test forex strategies (SMA crossover, RSI reversal) on historical price data with performance stats.
+- [Brokers](/brokers): Connect trading accounts from Deriv and Vantage.

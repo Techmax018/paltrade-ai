@@ -380,8 +380,10 @@ function AIMentor() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about pips, risk, chart patterns…"
+              aria-label="Ask the PalTrade AI mentor"
               className="flex-1 rounded-md bg-input px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
             />
+
             <button
               type="submit"
               disabled={loading || !input.trim()}
