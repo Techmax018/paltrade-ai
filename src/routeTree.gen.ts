@@ -9,9 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as BrokersRouteImport } from './routes/brokers'
+import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
+const BrokersRoute = BrokersRouteImport.update({
+  id: '/brokers',
+  path: '/brokers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BacktestRoute = BacktestRouteImport.update({
+  id: '/backtest',
+  path: '/backtest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +37,54 @@ const ApiChatRoute = ApiChatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/backtest': typeof BacktestRoute
+  '/brokers': typeof BrokersRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/backtest': typeof BacktestRoute
+  '/brokers': typeof BrokersRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/backtest': typeof BacktestRoute
+  '/brokers': typeof BrokersRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/chat'
+  fullPaths: '/' | '/backtest' | '/brokers' | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/chat'
-  id: '__root__' | '/' | '/api/chat'
+  to: '/' | '/backtest' | '/brokers' | '/api/chat'
+  id: '__root__' | '/' | '/backtest' | '/brokers' | '/api/chat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BacktestRoute: typeof BacktestRoute
+  BrokersRoute: typeof BrokersRoute
   ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/brokers': {
+      id: '/brokers'
+      path: '/brokers'
+      fullPath: '/brokers'
+      preLoaderRoute: typeof BrokersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backtest': {
+      id: '/backtest'
+      path: '/backtest'
+      fullPath: '/backtest'
+      preLoaderRoute: typeof BacktestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BacktestRoute: BacktestRoute,
+  BrokersRoute: BrokersRoute,
   ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport

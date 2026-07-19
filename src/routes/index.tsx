@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   TrendingUp,
@@ -101,17 +101,19 @@ function Nav() {
             pal<span className="text-primary">trade</span>
           </span>
         </a>
-        <nav className="hidden gap-8 text-sm text-muted-foreground md:flex">
+        <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
           <a href="#markets" className="hover:text-foreground">Markets</a>
           <a href="#classes" className="hover:text-foreground">Classes</a>
+          <Link to="/backtest" className="hover:text-foreground">Backtest</Link>
+          <Link to="/brokers" className="hover:text-foreground">Brokers</Link>
           <a href="#mentor" className="hover:text-foreground">AI Mentor</a>
         </nav>
-        <a
-          href="#mentor"
+        <Link
+          to="/brokers"
           className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:brightness-110"
         >
-          Start free
-        </a>
+          Connect broker
+        </Link>
       </div>
     </header>
   );
