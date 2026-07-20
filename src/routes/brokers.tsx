@@ -1,14 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Link2, ShieldCheck, CheckCircle2, XCircle, Loader2, Plug } from "lucide-react";
+import { getOrigin } from "../lib/og";
 
 export const Route = createFileRoute("/brokers")({
-  head: () => ({
-    meta: [
-      { title: "Connect Broker — PalTrade" },
-      { name: "description", content: "Connect your Deriv or Vantage trading account to PalTrade for analysis and journaling." },
-    ],
-  }),
+  loader: async () => ({ origin: await getOrigin() }),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin ?? "";
+    const img = `${origin}/og-brokers.jpg`;
+    return {
+      meta: [
+        { title: "Connect Broker — PalTrade" },
+        { name: "description", content: "Connect your Deriv or Vantage trading account to PalTrade for analysis and journaling." },
+        { property: "og:title", content: "Connect Broker — PalTrade" },
+        { property: "og:description", content: "Connect Deriv or Vantage — secure, read-only broker integration for PalTrade." },
+        { property: "og:url", content: "/brokers" },
+        { property: "og:image", content: img },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "Connect Deriv or Vantage on PalTrade" },
+        { name: "twitter:image", content: img },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [{ rel: "canonical", href: "/brokers" }],
+    };
+  },
   component: BrokersPage,
 });
 

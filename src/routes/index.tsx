@@ -14,7 +14,24 @@ import {
   Zap,
 } from "lucide-react";
 
+import { getOrigin } from "../lib/og";
+
 export const Route = createFileRoute("/")({
+  loader: async () => ({ origin: await getOrigin() }),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin ?? "";
+    const img = `${origin}/og-home.jpg`;
+    return {
+      meta: [
+        { property: "og:image", content: img },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "PalTrade — Forex Analysis & AI Mentor" },
+        { name: "twitter:image", content: img },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+    };
+  },
   component: Home,
 });
 
