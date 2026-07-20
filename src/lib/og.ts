@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getWebRequest } from "@tanstack/react-start/server";
+import { getRequest } from "@tanstack/react-start/server";
 
 export const getOrigin = createServerFn({ method: "GET" }).handler(async () => {
-  const req = getWebRequest();
+  const req = getRequest();
   if (!req) return "";
   try {
     return new URL(req.url).origin;
