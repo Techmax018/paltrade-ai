@@ -123,6 +123,7 @@ function Nav() {
           <a href="#classes" className="hover:text-foreground">Classes</a>
           <Link to="/backtest" className="hover:text-foreground">Backtest</Link>
           <Link to="/brokers" className="hover:text-foreground">Brokers</Link>
+          <Link to="/calculator" className="hover:text-foreground">Calculator</Link>
           <a href="#mentor" className="hover:text-foreground">AI Mentor</a>
         </nav>
         <Link
