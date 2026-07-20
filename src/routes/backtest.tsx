@@ -1,14 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { LineChart, Play, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
+import { getOrigin } from "../lib/og";
 
 export const Route = createFileRoute("/backtest")({
-  head: () => ({
-    meta: [
-      { title: "Backtest — PalTrade Strategy Lab" },
-      { name: "description", content: "Test simple forex strategies (SMA crossover, RSI) on historical price data and see equity, win rate, and drawdown." },
-    ],
-  }),
+  loader: async () => ({ origin: await getOrigin() }),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin ?? "";
+    const img = `${origin}/og-backtest.jpg`;
+    return {
+      meta: [
+        { title: "Backtest — PalTrade Strategy Lab" },
+        { name: "description", content: "Test simple forex strategies (SMA crossover, RSI) on historical price data and see equity, win rate, and drawdown." },
+        { property: "og:title", content: "Backtest — PalTrade Strategy Lab" },
+        { property: "og:description", content: "Test simple forex strategies on historical data. Equity curve, win rate, drawdown." },
+        { property: "og:url", content: "/backtest" },
+        { property: "og:image", content: img },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "PalTrade Strategy Backtesting" },
+        { name: "twitter:image", content: img },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [{ rel: "canonical", href: "/backtest" }],
+    };
+  },
   component: BacktestPage,
 });
 
