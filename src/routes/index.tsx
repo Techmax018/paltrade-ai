@@ -20,9 +20,23 @@ export const Route = createFileRoute("/")({
   loader: async () => ({ origin: await getOrigin() }),
   head: ({ loaderData }) => {
     const origin = loaderData?.origin ?? "";
+    const url = `${origin}/`;
     const img = `${origin}/og-home.jpg`;
     return {
       meta: [
+        { title: "PalTrade — Forex Analysis, Classes & AI Mentor" },
+        {
+          name: "description",
+          content:
+            "Learn forex from zero with beginner classes, live-style market analysis, a backtesting lab, a lot size calculator, and an AI mentor — all in one dark, focused workspace.",
+        },
+        { property: "og:title", content: "PalTrade — Forex Analysis, Classes & AI Mentor" },
+        {
+          property: "og:description",
+          content:
+            "Beginner forex classes, market analysis, strategy backtesting, and an AI mentor in one dark workspace.",
+        },
+        { property: "og:url", content: url },
         { property: "og:image", content: img },
         { property: "og:image:width", content: "1200" },
         { property: "og:image:height", content: "630" },
@@ -30,6 +44,7 @@ export const Route = createFileRoute("/")({
         { name: "twitter:image", content: img },
         { name: "twitter:card", content: "summary_large_image" },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   component: Home,
