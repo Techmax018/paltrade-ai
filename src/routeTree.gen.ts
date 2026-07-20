@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as BrokersRouteImport } from './routes/brokers'
 import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +19,11 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrokersRoute = BrokersRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/backtest': typeof BacktestRoute
   '/brokers': typeof BrokersRoute
+  '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/backtest': typeof BacktestRoute
   '/brokers': typeof BrokersRoute
+  '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
 }
@@ -60,21 +68,42 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/backtest': typeof BacktestRoute
   '/brokers': typeof BrokersRoute
+  '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/backtest' | '/brokers' | '/sitemap.xml' | '/api/chat'
+  fullPaths:
+    | '/'
+    | '/backtest'
+    | '/brokers'
+    | '/calculator'
+    | '/sitemap.xml'
+    | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/backtest' | '/brokers' | '/sitemap.xml' | '/api/chat'
-  id: '__root__' | '/' | '/backtest' | '/brokers' | '/sitemap.xml' | '/api/chat'
+  to:
+    | '/'
+    | '/backtest'
+    | '/brokers'
+    | '/calculator'
+    | '/sitemap.xml'
+    | '/api/chat'
+  id:
+    | '__root__'
+    | '/'
+    | '/backtest'
+    | '/brokers'
+    | '/calculator'
+    | '/sitemap.xml'
+    | '/api/chat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BacktestRoute: typeof BacktestRoute
   BrokersRoute: typeof BrokersRoute
+  CalculatorRoute: typeof CalculatorRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiChatRoute: typeof ApiChatRoute
 }
@@ -86,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brokers': {
@@ -123,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BacktestRoute: BacktestRoute,
   BrokersRoute: BrokersRoute,
+  CalculatorRoute: CalculatorRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiChatRoute: ApiChatRoute,
 }
