@@ -85,10 +85,14 @@ function TerminalPage() {
   }, [settings.appId, settings.token, settings.accountType]);
 
   // candles
+  const [seedPrice, setSeedPrice] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
+    setSeedPrice(null);
     connRef.current?.getCandles(symbolCode, timeframe, 300).then((c) => {
-      if (!cancelled) setCandles(c);
+      if (cancelled) return;
+      setCandles(c);
+      setSeedPrice(c.at(-1)?.close ?? null);
     });
     return () => {
       cancelled = true;
@@ -98,22 +102,26 @@ function TerminalPage() {
   // ticks
   useEffect(() => {
     const conn = connRef.current;
-    if (!conn || status !== "connected") return;
-    const off = conn.subscribeTicks(symbolCode, (t) => {
-      setPrices((p) => ({ ...p, [t.symbol]: t.quote }));
-      setCandles((cs) => {
-        if (!cs.length) return cs;
-        const next = cs.slice();
-        const last = { ...next[next.length - 1] };
-        last.close = t.quote;
-        last.high = Math.max(last.high, t.quote);
-        last.low = Math.min(last.low, t.quote);
-        next[next.length - 1] = last;
-        return next;
-      });
-    });
+    if (!conn || status !== "connected" || seedPrice === null) return;
+    const off = conn.subscribeTicks(
+      symbolCode,
+      (t) => {
+        setPrices((p) => ({ ...p, [t.symbol]: t.quote }));
+        setCandles((cs) => {
+          if (!cs.length) return cs;
+          const next = cs.slice();
+          const last = { ...next[next.length - 1] };
+          last.close = t.quote;
+          last.high = Math.max(last.high, t.quote);
+          last.low = Math.min(last.low, t.quote);
+          next[next.length - 1] = last;
+          return next;
+        });
+      },
+      seedPrice,
+    );
     return off;
-  }, [symbolCode, status]);
+  }, [symbolCode, status, seedPrice]);
 
   const closePosition = useCallback((id: string, exitPrice?: number, reason?: string) => {
     setPositions((cur) => {
