@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as BrokersRouteImport } from './routes/brokers'
@@ -16,6 +17,11 @@ import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
+const TerminalRoute = TerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/brokers': typeof BrokersRoute
   '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/brokers': typeof BrokersRoute
   '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/brokers': typeof BrokersRoute
   '/calculator': typeof CalculatorRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/brokers'
     | '/calculator'
     | '/sitemap.xml'
+    | '/terminal'
     | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/brokers'
     | '/calculator'
     | '/sitemap.xml'
+    | '/terminal'
     | '/api/chat'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/brokers'
     | '/calculator'
     | '/sitemap.xml'
+    | '/terminal'
     | '/api/chat'
   fileRoutesById: FileRoutesById
 }
@@ -105,11 +117,19 @@ export interface RootRouteChildren {
   BrokersRoute: typeof BrokersRoute
   CalculatorRoute: typeof CalculatorRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TerminalRoute: typeof TerminalRoute
   ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terminal': {
+      id: '/terminal'
+      path: '/terminal'
+      fullPath: '/terminal'
+      preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrokersRoute: BrokersRoute,
   CalculatorRoute: CalculatorRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TerminalRoute: TerminalRoute,
   ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport

@@ -136,16 +136,17 @@ function Nav() {
         <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
           <a href="#markets" className="hover:text-foreground">Markets</a>
           <a href="#classes" className="hover:text-foreground">Classes</a>
+          <Link to="/terminal" className="hover:text-foreground">Terminal</Link>
           <Link to="/backtest" className="hover:text-foreground">Backtest</Link>
           <Link to="/brokers" className="hover:text-foreground">Brokers</Link>
           <Link to="/calculator" className="hover:text-foreground">Calculator</Link>
           <a href="#mentor" className="hover:text-foreground">AI Mentor</a>
         </nav>
         <Link
-          to="/brokers"
+          to="/terminal"
           className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:brightness-110"
         >
-          Connect broker
+          Open terminal
         </Link>
       </div>
     </header>
