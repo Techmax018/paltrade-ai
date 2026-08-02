@@ -31,6 +31,8 @@
   --color-bull: var(--bull);
   --color-bear: var(--bear);
   --color-gold: var(--gold);
+  --color-signal: var(--signal);
+  --color-profit: var(--profit);
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
@@ -60,6 +62,9 @@
   --bull: oklch(0.75 0.19 152);
   --bear: oklch(0.66 0.22 22);
   --gold: oklch(0.82 0.17 85);
+  /* terminal accents: electric cyan + emerald */
+  --signal: oklch(0.74 0.13 205);
+  --profit: oklch(0.72 0.15 162);
 
   --gradient-hero: radial-gradient(ellipse at top, oklch(0.28 0.08 85 / 0.35), transparent 60%),
                    radial-gradient(ellipse at bottom left, oklch(0.30 0.10 155 / 0.25), transparent 55%),
