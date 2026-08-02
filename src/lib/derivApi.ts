@@ -90,7 +90,7 @@ export interface ConnectOptions {
 export interface DerivConnection {
   onStatus(cb: (s: ConnectionStatus) => void): () => void;
   onAccount(cb: (a: AccountInfo) => void): () => void;
-  subscribeTicks(symbol: string, cb: (t: Tick) => void): () => void;
+  subscribeTicks(symbol: string, cb: (t: Tick) => void, startPrice?: number): () => void;
   getCandles(symbol: string, timeframe: Timeframe, count: number): Promise<Candle[]>;
   placeTrade(req: TradeRequest): Promise<TradeResult>;
   closeTrade(id: string): Promise<{ ok: boolean }>;
@@ -187,8 +187,9 @@ class MockDerivConnection implements DerivConnection {
     return () => this.accountCbs.delete(cb) as unknown as void;
   }
 
-  subscribeTicks(symbol: string, cb: (t: Tick) => void) {
+  subscribeTicks(symbol: string, cb: (t: Tick) => void, startPrice?: number) {
     const meta = SYMBOLS.find((s) => s.code === symbol) ?? SYMBOLS[0];
+    if (startPrice !== undefined) this.prices.set(symbol, startPrice);
     if (!this.prices.has(symbol)) {
       const hist = generateCandles(symbol, "M1", 120);
       this.prices.set(symbol, hist[hist.length - 1].close);
