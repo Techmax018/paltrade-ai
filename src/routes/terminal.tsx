@@ -40,6 +40,7 @@ import {
   BarChart2,
   Brain,
   ChevronRight,
+  FlaskConical,
   KeyRound,
   Link2,
   Plug,
@@ -47,6 +48,7 @@ import {
   VolumeX,
   Zap,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/terminal")({
   loader: async () => ({ origin: await getOrigin() }),
