@@ -119,7 +119,7 @@ function TerminalPage() {
   const [audioEnabled, setAudioEnabled] = useState(true);
 
   /* ── Mobile tab switcher ─────────────────────────────────────────────── */
-  const [mobileTab, setMobileTab] = useState<"chart" | "strategy">("chart");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("chart");
 
   /* ── Sync OAuth session → WebSocket settings ─────────────────────────── */
   useEffect(() => {
