@@ -5,10 +5,28 @@ import {
   ExternalLink, LogOut, RefreshCw, ShieldCheck, Unplug, User, XCircle,
 } from "lucide-react";
 import { getOrigin } from "../lib/og";
-import { buildDerivOAuthUrl, useDerivOAuth, type DerivOAuthAccount } from "../hooks/useDerivOAuth";
+import {
+  buildDerivOAuthUrl,
+  isDerivOAuthConfigured,
+  useDerivOAuth,
+  type DerivOAuthAccount,
+} from "../hooks/useDerivOAuth";
+
+/* ── API base ────────────────────────────────────────────────────────────────
+ * When VITE_BACKEND_URL is set (Render + Neon deployment) all broker calls go
+ * there; otherwise they fall back to the bundled edge routes.
+ * ------------------------------------------------------------------------- */
+const BACKEND_URL = (
+  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_BACKEND_URL ?? ""
+).replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  return BACKEND_URL ? `${BACKEND_URL}${path}` : path;
+}
 
 /* ── Storage / types ─────────────────────────────────────────────────────── */
 const VANTAGE_SESSION_KEY = "paltrade.vantage.session.v1";
+
 
 interface VantageSession {
   sessionToken: string;
