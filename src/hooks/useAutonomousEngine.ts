@@ -313,17 +313,24 @@ export function useAutonomousEngine({
   ]);
 
   /* ── Periodic background scanner ────────────────────────────────────────── */
+  // runScan is recreated on every render (it closes over positions and the
+  // caller's inline callbacks). Keeping it in a ref stops the interval effect
+  // from tearing down/re-arming each render — which previously produced a
+  // "Maximum update depth exceeded" render loop in the terminal.
+  const runScanRef = useRef(runScan);
+  useEffect(() => { runScanRef.current = runScan; }, [runScan]);
+
   useEffect(() => {
-    if (!autoPilot && !candles.length) return;
+    if (!autoPilot && !hasCandles) return;
     setIsRunning(true);
-    // Run immediately on mount / config change
-    runScan();
-    const id = setInterval(runScan, config.scanIntervalMs);
+    runScanRef.current();
+    const id = setInterval(() => runScanRef.current(), config.scanIntervalMs);
     return () => {
       clearInterval(id);
       setIsRunning(false);
     };
-  }, [autoPilot, runScan, config.scanIntervalMs, candles.length]);
+  }, [autoPilot, hasCandles, config.scanIntervalMs]);
+
 
   /* ── Signal outcome resolver ─────────────────────────────────────────────── */
   const resolveSignal = useCallback((signalId: string, outcome: "WIN" | "LOSS") => {
