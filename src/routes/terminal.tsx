@@ -433,11 +433,11 @@ function TerminalPage() {
         onToggleAudio={() => setAudioEnabled((v) => !v)}
       />
 
-      <main className="mx-auto grid w-full max-w-[1600px] gap-4 px-2 py-3 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="mx-auto grid w-full max-w-[1600px] min-w-0 gap-4 overflow-x-hidden px-2 py-3 pb-16 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <h1 className="sr-only">PalTrade Deriv trading terminal for forex and synthetic indices</h1>
 
         {/* ── Left column ────────────────────────────────────────────────── */}
-        <div className={`space-y-4 ${mobileTab === "strategy" ? "hidden lg:block" : "block"}`}>
+        <div className={`min-w-0 space-y-4 ${mobileTab === "chart" ? "block" : "hidden lg:block"}`}>
           <ChartContainer
             candles={candles}
             symbol={symbol}
@@ -471,10 +471,19 @@ function TerminalPage() {
             stats={engine.stats}
             onClear={engine.clearFeed}
           />
+
+          {/* Backtest lives in the left column on desktop, own tab on mobile */}
+          <div className="hidden lg:block">
+            <BacktestPanel
+              symbol={symbol}
+              balance={account?.balance ?? 10000}
+              getCandles={fetchCandles}
+            />
+          </div>
         </div>
 
         {/* ── Right column ─────────────────────────────────────────────── */}
-        <div className={mobileTab === "chart" ? "hidden lg:block" : "block"}>
+        <div className={`min-w-0 ${mobileTab === "strategy" ? "block" : "hidden lg:block"}`}>
           <StrategyPanel
             symbol={symbol}
             price={price}
@@ -488,7 +497,19 @@ function TerminalPage() {
             onExecute={execute}
           />
         </div>
+
+        {/* ── Mobile-only backtest tab ─────────────────────────────────── */}
+        {mobileTab === "backtest" && (
+          <div className="min-w-0 lg:hidden">
+            <BacktestPanel
+              symbol={symbol}
+              balance={account?.balance ?? 10000}
+              getCandles={fetchCandles}
+            />
+          </div>
+        )}
       </main>
+
 
       {/* ── Modals / drawers ─────────────────────────────────────────────── */}
       <SettingsModal
