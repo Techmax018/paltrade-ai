@@ -162,6 +162,22 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
         </div>
       )}
 
+      {!isDerivOAuthConfigured() && (
+        <div className="rounded-xl border border-[var(--gold)]/40 bg-[var(--gold)]/10 px-4 py-3 text-xs leading-relaxed text-foreground">
+          <strong className="block text-sm">Deriv OAuth is not configured for this deployment</strong>
+          Login will bounce straight back from Deriv until you register your own app. On{" "}
+          <a href="https://api.deriv.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">
+            api.deriv.com → Manage applications
+          </a>{" "}
+          create an app, set its <span className="font-mono">Redirect URL</span> to{" "}
+          <span className="font-mono">
+            {typeof window !== "undefined" ? `${window.location.origin}/brokers` : "https://your-domain/brokers"}
+          </span>
+          , then set <span className="font-mono">VITE_DERIV_APP_ID</span> to that app id and redeploy.
+        </div>
+      )}
+
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Checking session…</p>
       ) : isAuthenticated ? (
