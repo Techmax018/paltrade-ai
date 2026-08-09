@@ -189,6 +189,17 @@ function TerminalPage() {
 
   /* ── Candle fetch ────────────────────────────────────────────────────── */
   const [seedPrice, setSeedPrice] = useState<number | null>(null);
+
+  /** Shared history fetcher — used by the chart and the backtest runner. */
+  const fetchCandles = useCallback(
+    async (code: string, tf: Timeframe, count: number): Promise<Candle[]> => {
+      const conn = connRef.current;
+      if (!conn) throw new Error("Not connected — connect a Deriv account first.");
+      return conn.getCandles(code, tf, count);
+    },
+    [],
+  );
+
   useEffect(() => {
     let cancelled = false;
     setSeedPrice(null);
