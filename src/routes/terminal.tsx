@@ -10,6 +10,8 @@ import { SettingsModal, type SettingsValues } from "@/components/terminal/Settin
 import { AutoPilotConfigDrawer } from "@/components/terminal/AutoPilotConfig";
 import { AuditLog } from "@/components/terminal/AuditLog";
 import { TradeFeed } from "@/components/terminal/TradeFeed";
+import { BacktestPanel } from "@/components/terminal/BacktestPanel";
+
 import {
   useAutonomousEngine,
   DEFAULT_CONFIG,
@@ -40,6 +42,7 @@ import {
   BarChart2,
   Brain,
   ChevronRight,
+  FlaskConical,
   KeyRound,
   Link2,
   Plug,
@@ -47,6 +50,7 @@ import {
   VolumeX,
   Zap,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/terminal")({
   loader: async () => ({ origin: await getOrigin() }),
@@ -117,7 +121,7 @@ function TerminalPage() {
   const [audioEnabled, setAudioEnabled] = useState(true);
 
   /* ── Mobile tab switcher ─────────────────────────────────────────────── */
-  const [mobileTab, setMobileTab] = useState<"chart" | "strategy">("chart");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("chart");
 
   /* ── Sync OAuth session → WebSocket settings ─────────────────────────── */
   useEffect(() => {
@@ -185,6 +189,17 @@ function TerminalPage() {
 
   /* ── Candle fetch ────────────────────────────────────────────────────── */
   const [seedPrice, setSeedPrice] = useState<number | null>(null);
+
+  /** Shared history fetcher — used by the chart and the backtest runner. */
+  const fetchCandles = useCallback(
+    async (code: string, tf: Timeframe, count: number): Promise<Candle[]> => {
+      const conn = connRef.current;
+      if (!conn) throw new Error("Not connected — connect a Deriv account first.");
+      return conn.getCandles(code, tf, count);
+    },
+    [],
+  );
+
   useEffect(() => {
     let cancelled = false;
     setSeedPrice(null);
@@ -431,11 +446,11 @@ function TerminalPage() {
         onToggleAudio={() => setAudioEnabled((v) => !v)}
       />
 
-      <main className="mx-auto grid w-full max-w-[1600px] gap-4 px-2 py-3 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="mx-auto grid w-full max-w-[1600px] min-w-0 gap-4 overflow-x-hidden px-2 py-3 pb-16 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <h1 className="sr-only">PalTrade Deriv trading terminal for forex and synthetic indices</h1>
 
         {/* ── Left column ────────────────────────────────────────────────── */}
-        <div className={`space-y-4 ${mobileTab === "strategy" ? "hidden lg:block" : "block"}`}>
+        <div className={`min-w-0 space-y-4 ${mobileTab === "chart" ? "block" : "hidden lg:block"}`}>
           <ChartContainer
             candles={candles}
             symbol={symbol}
@@ -469,10 +484,19 @@ function TerminalPage() {
             stats={engine.stats}
             onClear={engine.clearFeed}
           />
+
+          {/* Backtest lives in the left column on desktop, own tab on mobile */}
+          <div className="hidden lg:block">
+            <BacktestPanel
+              symbol={symbol}
+              balance={account?.balance ?? 10000}
+              getCandles={fetchCandles}
+            />
+          </div>
         </div>
 
         {/* ── Right column ─────────────────────────────────────────────── */}
-        <div className={mobileTab === "chart" ? "hidden lg:block" : "block"}>
+        <div className={`min-w-0 ${mobileTab === "strategy" ? "block" : "hidden lg:block"}`}>
           <StrategyPanel
             symbol={symbol}
             price={price}
@@ -486,7 +510,19 @@ function TerminalPage() {
             onExecute={execute}
           />
         </div>
+
+        {/* ── Mobile-only backtest tab ─────────────────────────────────── */}
+        {mobileTab === "backtest" && (
+          <div className="min-w-0 lg:hidden">
+            <BacktestPanel
+              symbol={symbol}
+              balance={account?.balance ?? 10000}
+              getCandles={fetchCandles}
+            />
+          </div>
+        )}
       </main>
+
 
       {/* ── Modals / drawers ─────────────────────────────────────────────── */}
       <SettingsModal
@@ -514,42 +550,42 @@ function TerminalPage() {
 }
 
 /* ── MobileTabBar ─────────────────────────────────────────────────────────── */
+type MobileTab = "chart" | "strategy" | "backtest";
+
 function MobileTabBar({
   activeTab,
   audioEnabled,
   onChange,
   onToggleAudio,
 }: {
-  activeTab: "chart" | "strategy";
+  activeTab: MobileTab;
   audioEnabled: boolean;
-  onChange: (tab: "chart" | "strategy") => void;
+  onChange: (tab: MobileTab) => void;
   onToggleAudio: () => void;
 }) {
-  return (
-    <div className="flex items-center gap-0 border-b border-border/60 bg-card/80 px-2 lg:hidden">
-      <button
-        onClick={() => onChange("chart")}
-        className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-          activeTab === "chart"
-            ? "border-b-2 border-signal text-signal"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <BarChart2 className="h-3.5 w-3.5" />
-        Chart & Feed
-      </button>
+  const tabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = [
+    { id: "chart", label: "Chart", icon: <BarChart2 className="h-3.5 w-3.5" /> },
+    { id: "strategy", label: "AI", icon: <Brain className="h-3.5 w-3.5" /> },
+    { id: "backtest", label: "Backtest", icon: <FlaskConical className="h-3.5 w-3.5" /> },
+  ];
 
-      <button
-        onClick={() => onChange("strategy")}
-        className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-          activeTab === "strategy"
-            ? "border-b-2 border-signal text-signal"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Brain className="h-3.5 w-3.5" />
-        AI Strategy
-      </button>
+  return (
+    <div className="flex items-center gap-0 overflow-x-auto border-b border-border/60 bg-card/80 px-2 lg:hidden">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap px-2 py-2.5 text-xs font-semibold transition-colors ${
+            activeTab === t.id
+              ? "border-b-2 border-signal text-signal"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.icon}
+          {t.label}
+        </button>
+      ))}
+
 
       {/* Audio toggle — right side of tab bar */}
       <button

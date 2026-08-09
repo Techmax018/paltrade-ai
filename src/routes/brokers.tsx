@@ -5,10 +5,28 @@ import {
   ExternalLink, LogOut, RefreshCw, ShieldCheck, Unplug, User, XCircle,
 } from "lucide-react";
 import { getOrigin } from "../lib/og";
-import { buildDerivOAuthUrl, useDerivOAuth, type DerivOAuthAccount } from "../hooks/useDerivOAuth";
+import {
+  buildDerivOAuthUrl,
+  isDerivOAuthConfigured,
+  useDerivOAuth,
+  type DerivOAuthAccount,
+} from "../hooks/useDerivOAuth";
+
+/* ── API base ────────────────────────────────────────────────────────────────
+ * When VITE_BACKEND_URL is set (Render + Neon deployment) all broker calls go
+ * there; otherwise they fall back to the bundled edge routes.
+ * ------------------------------------------------------------------------- */
+const BACKEND_URL = (
+  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_BACKEND_URL ?? ""
+).replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  return BACKEND_URL ? `${BACKEND_URL}${path}` : path;
+}
 
 /* ── Storage / types ─────────────────────────────────────────────────────── */
 const VANTAGE_SESSION_KEY = "paltrade.vantage.session.v1";
+
 
 interface VantageSession {
   sessionToken: string;
@@ -144,6 +162,22 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
         </div>
       )}
 
+      {!isDerivOAuthConfigured() && (
+        <div className="rounded-xl border border-[var(--gold)]/40 bg-[var(--gold)]/10 px-4 py-3 text-xs leading-relaxed text-foreground">
+          <strong className="block text-sm">Deriv OAuth is not configured for this deployment</strong>
+          Login will bounce straight back from Deriv until you register your own app. On{" "}
+          <a href="https://api.deriv.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">
+            api.deriv.com → Manage applications
+          </a>{" "}
+          create an app, set its <span className="font-mono">Redirect URL</span> to{" "}
+          <span className="font-mono">
+            {typeof window !== "undefined" ? `${window.location.origin}/brokers` : "https://your-domain/brokers"}
+          </span>
+          , then set <span className="font-mono">VITE_DERIV_APP_ID</span> to that app id and redeploy.
+        </div>
+      )}
+
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Checking session…</p>
       ) : isAuthenticated ? (
@@ -234,7 +268,7 @@ function VantageCard() {
 
   // ── RULE 1: Fetch dynamic server list from backend ────────────────────────
   useEffect(() => {
-    fetch("/api/v1/broker/servers")
+    fetch(apiUrl("/api/v1/broker/servers"))
       .then((r) => r.json())
       .then((data: { ok: boolean; servers: ServerOption[] }) => {
         if (data.ok && data.servers.length) {
@@ -259,7 +293,7 @@ function VantageCard() {
     esRef.current?.close();
     setStreamStatus("connecting");
     setWafAlert("");
-    const es = new EventSource(`/api/v1/broker/stream?token=${encodeURIComponent(token)}`);
+    const es = new EventSource(apiUrl(`/api/v1/broker/stream?token=${encodeURIComponent(token)}`));
     esRef.current = es;
     es.addEventListener("connected", () => setStreamStatus("live"));
     es.addEventListener("account-update", (e) => {
@@ -295,7 +329,7 @@ function VantageCard() {
     }, 15_000); // 15-second timeout per Rule 2
 
     try {
-      const res = await fetch("/api/v1/auth/connect-broker", {
+      const res = await fetch(apiUrl("/api/v1/auth/connect-broker"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,

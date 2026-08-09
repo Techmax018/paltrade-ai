@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { captureDerivRedirect } from "../hooks/useDerivOAuth";
+
 
 function NotFoundComponent() {
   return (
@@ -195,9 +197,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Deriv returns the user to the redirect URL registered on the app, which is
+  // not always /login. Capture the tokens globally so the session is stored no
+  // matter which route the browser lands on (this is what broke the loop).
+  useEffect(() => {
+    captureDerivRedirect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
     </QueryClientProvider>
   );
 }
+
