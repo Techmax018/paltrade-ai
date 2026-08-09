@@ -313,7 +313,8 @@ export function useAutonomousEngine({
   ]);
 
   /* ── Periodic background scanner ────────────────────────────────────────── */
-  // runScan is recreated on every render (it closes over positions and the
+  const hasCandles = candles.length > 0;
+
   // caller's inline callbacks). Keeping it in a ref stops the interval effect
   // from tearing down/re-arming each render — which previously produced a
   // "Maximum update depth exceeded" render loop in the terminal.
