@@ -532,7 +532,7 @@ function MobileTabBar({
   const tabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = [
     { id: "chart", label: "Chart", icon: <BarChart2 className="h-3.5 w-3.5" /> },
     { id: "strategy", label: "AI", icon: <Brain className="h-3.5 w-3.5" /> },
-    { id: "backtest", label: "Backtest", icon: <History className="h-3.5 w-3.5" /> },
+    { id: "backtest", label: "Backtest", icon: <FlaskConical className="h-3.5 w-3.5" /> },
   ];
 
   return (
