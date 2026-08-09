@@ -149,57 +149,71 @@ function parseDerivRedirectParams(search: string): DerivOAuthAccount[] {
   });
 }
 
+/* ── Global redirect capture ────────────────────────────────────────────── */
+/**
+ * Captures a Deriv OAuth redirect on ANY route (Deriv always returns to the
+ * URL registered on the app, which may not be /login). Persists the session,
+ * strips the token params from the address bar and returns the session.
+ * Safe to call repeatedly — it no-ops when there is nothing to capture.
+ */
+export function captureDerivRedirect(): DerivOAuthSession | null {
+  if (typeof window === "undefined") return null;
+  const search = window.location.search;
+  const params = new URLSearchParams(search);
+  if (!params.has("acct1") || !params.has("token1")) return null;
+
+  const accounts = parseDerivRedirectParams(search);
+  if (accounts.length === 0) return null;
+
+  const preferred = accounts.find((a) => a.type === "real") ?? accounts[0];
+  const newSession: DerivOAuthSession = {
+    accounts,
+    activeLoginId: preferred.loginid,
+    savedAt: Date.now(),
+  };
+  saveSession(newSession);
+
+  localStorage.setItem(
+    CONNECTIONS_KEY,
+    JSON.stringify(
+      accounts.map((a) => ({
+        broker: "deriv",
+        account: a.loginid,
+        currency: a.currency,
+        connectedAt: Date.now(),
+      })),
+    ),
+  );
+
+  // Strip every acctN/tokenN/curN pair (Deriv can return many) + state.
+  const clean = new URL(window.location.href);
+  [...clean.searchParams.keys()]
+    .filter((k) => /^(acct|token|cur)\d+$/i.test(k) || k === "state")
+    .forEach((k) => clean.searchParams.delete(k));
+  window.history.replaceState({}, "", clean.toString());
+
+  window.dispatchEvent(new CustomEvent("deriv-oauth-connected", { detail: newSession }));
+  return newSession;
+}
+
 /* ── Main hook ──────────────────────────────────────────────────────────── */
 export function useDerivOAuth(): UseDerivOAuthResult {
   const [session, setSession] = useState<DerivOAuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Check if this page load is a Deriv OAuth redirect
-    const search = typeof window !== "undefined" ? window.location.search : "";
-    const params = new URLSearchParams(search);
-
-    if (params.has("acct1") && params.has("token1")) {
-      // ── OAuth redirect received ──────────────────────────────────────
-      const accounts = parseDerivRedirectParams(search);
-
-      if (accounts.length > 0) {
-        // Prefer the first real account; fall back to first virtual
-        const preferred = accounts.find((a) => a.type === "real") ?? accounts[0];
-
-        const newSession: DerivOAuthSession = {
-          accounts,
-          activeLoginId: preferred.loginid,
-          savedAt: Date.now(),
-        };
-
-        saveSession(newSession);
-
-        // Also write to paltrade.connections.v1 so ConnectGate passes
-        const connections = accounts.map((a) => ({
-          broker: "deriv",
-          account: a.loginid,
-          currency: a.currency,
-          connectedAt: Date.now(),
-        }));
-        localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(connections));
-
-        setSession(newSession);
-
-        // Clean OAuth params from the URL without a page reload
-        const clean = new URL(window.location.href);
-        ["acct1", "token1", "cur1", "acct2", "token2", "cur2",
-         "acct3", "token3", "cur3"].forEach((k) => clean.searchParams.delete(k));
-        window.history.replaceState({}, "", clean.toString());
-      }
-    } else {
-      // ── Normal page load — try to restore saved session ──────────────
-      const saved = loadSession();
-      if (saved) setSession(saved);
-    }
-
+    const captured = captureDerivRedirect();
+    setSession(captured ?? loadSession());
     setLoading(false);
+
+    const onConnected = (e: Event) => {
+      const detail = (e as CustomEvent<DerivOAuthSession>).detail;
+      if (detail) setSession(detail);
+    };
+    window.addEventListener("deriv-oauth-connected", onConnected);
+    return () => window.removeEventListener("deriv-oauth-connected", onConnected);
   }, []);
+
 
   function setActiveAccount(loginid: string) {
     if (!session) return;
