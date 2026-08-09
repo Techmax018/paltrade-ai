@@ -313,7 +313,7 @@ function VantageCard() {
     }, 15_000); // 15-second timeout per Rule 2
 
     try {
-      const res = await fetch("/api/v1/auth/connect-broker", {
+      const res = await fetch(apiUrl("/api/v1/auth/connect-broker"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
