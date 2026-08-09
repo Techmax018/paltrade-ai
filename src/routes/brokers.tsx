@@ -252,7 +252,7 @@ function VantageCard() {
 
   // ── RULE 1: Fetch dynamic server list from backend ────────────────────────
   useEffect(() => {
-    fetch("/api/v1/broker/servers")
+    fetch(apiUrl("/api/v1/broker/servers"))
       .then((r) => r.json())
       .then((data: { ok: boolean; servers: ServerOption[] }) => {
         if (data.ok && data.servers.length) {
