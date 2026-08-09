@@ -277,7 +277,7 @@ function VantageCard() {
     esRef.current?.close();
     setStreamStatus("connecting");
     setWafAlert("");
-    const es = new EventSource(`/api/v1/broker/stream?token=${encodeURIComponent(token)}`);
+    const es = new EventSource(apiUrl(`/api/v1/broker/stream?token=${encodeURIComponent(token)}`));
     esRef.current = es;
     es.addEventListener("connected", () => setStreamStatus("live"));
     es.addEventListener("account-update", (e) => {
