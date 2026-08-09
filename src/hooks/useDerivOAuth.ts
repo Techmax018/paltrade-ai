@@ -27,22 +27,43 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "paltrade.deriv.session.v1";
 const CONNECTIONS_KEY = "paltrade.connections.v1";
 
+function env(key: string): string | undefined {
+  const e = (import.meta as unknown as { env?: Record<string, string> }).env;
+  const v = e?.[key];
+  return v && v.trim() ? v.trim() : undefined;
+}
+
+/** Deriv app id configured for this deployment (no silent 1089 fallback). */
+export function getDerivAppId(): string | undefined {
+  return env("VITE_DERIV_APP_ID");
+}
+
+/**
+ * True when a usable Deriv app id is configured.
+ * App id 1089 is Deriv's own demo app: its registered redirect URL points back
+ * to Deriv, which is exactly the "bounces to Deriv and back to Deriv" loop.
+ */
+export function isDerivOAuthConfigured(): boolean {
+  const id = getDerivAppId();
+  return !!id && id !== "1089";
+}
+
 /**
  * Build the Deriv OAuth URL.
- * Reads VITE_DERIV_APP_ID from the environment (set in Vercel project settings).
- * Falls back to 1089 for local dev.
+ *
+ * Deriv sends the user back to the **redirect URL registered on the app**
+ * (api.deriv.com → Manage applications). A `redirect_uri` query param is only
+ * honoured when it is on that same registered domain, so we only append it
+ * when VITE_DERIV_REDIRECT_URI is explicitly set.
  */
 export function buildDerivOAuthUrl(): string {
-  const appId =
-    (typeof import.meta !== "undefined" &&
-      (import.meta as unknown as { env?: Record<string, string> }).env
-        ?.VITE_DERIV_APP_ID) ||
-    "1089";
-  // redirect_uri must point to /login so the OAuth callback is handled there
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://paltrade-ai-guide.vercel.app";
-  const redirectUri = encodeURIComponent(`${origin}/login`);
-  return `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&redirect_uri=${redirectUri}`;
+  const appId = getDerivAppId() ?? "1089";
+  const params = new URLSearchParams({ app_id: appId, l: "EN", brand: "deriv" });
+  const configuredRedirect = env("VITE_DERIV_REDIRECT_URI");
+  if (configuredRedirect) params.set("redirect_uri", configuredRedirect);
+  return `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
 }
+
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 export interface DerivOAuthAccount {
