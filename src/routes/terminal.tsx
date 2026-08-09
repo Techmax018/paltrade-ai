@@ -514,42 +514,42 @@ function TerminalPage() {
 }
 
 /* ── MobileTabBar ─────────────────────────────────────────────────────────── */
+type MobileTab = "chart" | "strategy" | "backtest";
+
 function MobileTabBar({
   activeTab,
   audioEnabled,
   onChange,
   onToggleAudio,
 }: {
-  activeTab: "chart" | "strategy";
+  activeTab: MobileTab;
   audioEnabled: boolean;
-  onChange: (tab: "chart" | "strategy") => void;
+  onChange: (tab: MobileTab) => void;
   onToggleAudio: () => void;
 }) {
-  return (
-    <div className="flex items-center gap-0 border-b border-border/60 bg-card/80 px-2 lg:hidden">
-      <button
-        onClick={() => onChange("chart")}
-        className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-          activeTab === "chart"
-            ? "border-b-2 border-signal text-signal"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <BarChart2 className="h-3.5 w-3.5" />
-        Chart & Feed
-      </button>
+  const tabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = [
+    { id: "chart", label: "Chart", icon: <BarChart2 className="h-3.5 w-3.5" /> },
+    { id: "strategy", label: "AI", icon: <Brain className="h-3.5 w-3.5" /> },
+    { id: "backtest", label: "Backtest", icon: <History className="h-3.5 w-3.5" /> },
+  ];
 
-      <button
-        onClick={() => onChange("strategy")}
-        className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-          activeTab === "strategy"
-            ? "border-b-2 border-signal text-signal"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Brain className="h-3.5 w-3.5" />
-        AI Strategy
-      </button>
+  return (
+    <div className="flex items-center gap-0 overflow-x-auto border-b border-border/60 bg-card/80 px-2 lg:hidden">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap px-2 py-2.5 text-xs font-semibold transition-colors ${
+            activeTab === t.id
+              ? "border-b-2 border-signal text-signal"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.icon}
+          {t.label}
+        </button>
+      ))}
+
 
       {/* Audio toggle — right side of tab bar */}
       <button
