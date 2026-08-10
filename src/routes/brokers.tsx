@@ -192,9 +192,10 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
             <Link to="/terminal" className="flex items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-xs font-bold text-background">
               Open Terminal <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-            <a href={buildDerivOAuthUrl()} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-signal/40">
+            <button type="button" onClick={() => { void startDerivLogin(); }} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-signal/40">
               <RefreshCw className="h-3.5 w-3.5" /> Re-authorise
-            </a>
+            </button>
+
             <button onClick={logout} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:border-bear/50 hover:text-bear">
               <LogOut className="h-3.5 w-3.5" /> Disconnect
             </button>
