@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthDerivCallbackRouteImport } from './routes/auth/deriv/callback'
 import { Route as ApiDerivTokenRouteImport } from './routes/api/deriv/token'
+import { Route as ApiAiStrategyRouteImport } from './routes/api/ai/strategy'
 import { Route as ApiV1BrokerStreamRouteImport } from './routes/api/v1/broker/stream'
 import { Route as ApiV1BrokerServersRouteImport } from './routes/api/v1/broker/servers'
 import { Route as ApiV1AuthConnectBrokerRouteImport } from './routes/api/v1/auth/connect-broker'
@@ -73,6 +74,11 @@ const ApiDerivTokenRoute = ApiDerivTokenRouteImport.update({
   path: '/api/deriv/token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiStrategyRoute = ApiAiStrategyRouteImport.update({
+  id: '/api/ai/strategy',
+  path: '/api/ai/strategy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1BrokerStreamRoute = ApiV1BrokerStreamRouteImport.update({
   id: '/api/v1/broker/stream',
   path: '/api/v1/broker/stream',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/strategy': typeof ApiAiStrategyRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/strategy': typeof ApiAiStrategyRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/strategy': typeof ApiAiStrategyRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/strategy'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/strategy'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/strategy'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
@@ -192,6 +204,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TerminalRoute: typeof TerminalRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiAiStrategyRoute: typeof ApiAiStrategyRoute
   ApiDerivTokenRoute: typeof ApiDerivTokenRoute
   AuthDerivCallbackRoute: typeof AuthDerivCallbackRoute
   ApiV1AuthConnectBrokerRoute: typeof ApiV1AuthConnectBrokerRoute
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDerivTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/strategy': {
+      id: '/api/ai/strategy'
+      path: '/api/ai/strategy'
+      fullPath: '/api/ai/strategy'
+      preLoaderRoute: typeof ApiAiStrategyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/broker/stream': {
       id: '/api/v1/broker/stream'
       path: '/api/v1/broker/stream'
@@ -304,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TerminalRoute: TerminalRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiAiStrategyRoute: ApiAiStrategyRoute,
   ApiDerivTokenRoute: ApiDerivTokenRoute,
   AuthDerivCallbackRoute: AuthDerivCallbackRoute,
   ApiV1AuthConnectBrokerRoute: ApiV1AuthConnectBrokerRoute,
@@ -313,3 +334,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
