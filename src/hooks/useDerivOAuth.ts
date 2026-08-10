@@ -48,13 +48,157 @@ export function isDerivOAuthConfigured(): boolean {
   return !!id && id !== "1089";
 }
 
+/* ── OAuth 2.0 (Authorization Code + PKCE) ──────────────────────────────── */
+const AUTHORIZE_ENDPOINT = "https://auth.deriv.com/oauth2/auth";
+const PKCE_VERIFIER_KEY = "paltrade.deriv.pkce.verifier";
+const PKCE_STATE_KEY = "paltrade.deriv.pkce.state";
+const PKCE_REDIRECT_KEY = "paltrade.deriv.pkce.redirect";
+
+function base64UrlEncode(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = "";
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export async function createPkce() {
+  const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
+  const code_verifier = base64UrlEncode(verifierBytes);
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(code_verifier),
+  );
+  return {
+    code_verifier,
+    code_challenge: base64UrlEncode(digest),
+    code_challenge_method: "S256" as const,
+  };
+}
+
+/** The callback URL registered with Deriv for this deployment. */
+export function getDerivRedirectUri(): string {
+  const configured = env("VITE_DERIV_REDIRECT_URI");
+  if (configured) return configured;
+  if (typeof window === "undefined") return "";
+  return `${window.location.origin}/auth/deriv/callback`;
+}
+
 /**
- * Build the Deriv OAuth URL.
- *
- * Deriv sends the user back to the **redirect URL registered on the app**
- * (api.deriv.com → Manage applications). A `redirect_uri` query param is only
- * honoured when it is on that same registered domain, so we only append it
- * when VITE_DERIV_REDIRECT_URI is explicitly set.
+ * Build the Deriv authorization URL (OAuth2 Authorization Code + PKCE) and
+ * persist the verifier/state in sessionStorage for the callback to verify.
+ */
+export async function buildDerivAuthorizeUrl(opts?: {
+  signup?: boolean;
+  scope?: "trade" | "admin";
+}): Promise<string> {
+  const clientId = getDerivAppId();
+  if (!clientId) throw new Error("VITE_DERIV_APP_ID is not configured.");
+
+  const { code_verifier, code_challenge, code_challenge_method } = await createPkce();
+  const state = base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)));
+  const redirectUri = getDerivRedirectUri();
+
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, code_verifier);
+  sessionStorage.setItem(PKCE_STATE_KEY, state);
+  sessionStorage.setItem(PKCE_REDIRECT_KEY, redirectUri);
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: opts?.scope ?? "trade",
+    state,
+    code_challenge,
+    code_challenge_method,
+  });
+  if (opts?.signup) params.set("prompt", "registration");
+
+  const affiliate = env("VITE_DERIV_AFFILIATE_TOKEN");
+  if (affiliate) {
+    params.set("utm_medium", "affiliate");
+    params.set("utm_source", affiliate);
+  }
+  const sidc = env("VITE_DERIV_SIDC");
+  if (sidc) params.set("sidc", sidc);
+
+  return `${AUTHORIZE_ENDPOINT}?${params.toString()}`;
+}
+
+/** Kick off the Deriv login (or signup) redirect. */
+export async function startDerivLogin(opts?: { signup?: boolean }): Promise<void> {
+  const url = await buildDerivAuthorizeUrl(opts);
+  window.location.href = url;
+}
+
+/**
+ * Handle the `?code=&state=` callback: verifies state, exchanges the code for
+ * an access token through our backend, and persists the session.
+ */
+export async function completeDerivOAuth(search: string): Promise<DerivOAuthSession> {
+  const params = new URLSearchParams(search);
+  const error = params.get("error");
+  if (error) {
+    throw new Error(params.get("error_description") || error);
+  }
+  const code = params.get("code");
+  const state = params.get("state");
+  if (!code) throw new Error("Missing authorization code in callback URL.");
+
+  const storedState = sessionStorage.getItem(PKCE_STATE_KEY);
+  if (!storedState || storedState !== state) {
+    throw new Error("State mismatch — possible CSRF. Please start the login again.");
+  }
+  const verifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
+  if (!verifier) throw new Error("Missing PKCE verifier — please start the login again.");
+
+  const redirectUri = sessionStorage.getItem(PKCE_REDIRECT_KEY) || getDerivRedirectUri();
+
+  const res = await fetch("/api/deriv/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code,
+      code_verifier: verifier,
+      redirect_uri: redirectUri,
+      client_id: getDerivAppId(),
+    }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
+
+  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+  sessionStorage.removeItem(PKCE_STATE_KEY);
+
+  if (!res.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || "Token exchange failed.");
+  }
+
+  const session: DerivOAuthSession = {
+    accounts: [],
+    activeLoginId: "",
+    savedAt: Date.now(),
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+  };
+  saveSession(session);
+  localStorage.setItem(
+    CONNECTIONS_KEY,
+    JSON.stringify([{ broker: "deriv", account: "OAuth", currency: "USD", connectedAt: Date.now() }]),
+  );
+  window.dispatchEvent(new CustomEvent("deriv-oauth-connected", { detail: session }));
+  return session;
+}
+
+/**
+ * Legacy helper kept for callers that still render a plain link.
+ * Prefer `startDerivLogin()` — PKCE requires async work before redirecting.
  */
 export function buildDerivOAuthUrl(): string {
   const appId = getDerivAppId() ?? "1089";
@@ -79,7 +223,12 @@ export interface DerivOAuthSession {
   /** loginid of the currently active account */
   activeLoginId: string;
   savedAt: number;
+  /** OAuth2 access token (Authorization Code + PKCE flow) */
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: number;
 }
+
 
 export interface UseDerivOAuthResult {
   /** All accounts returned by the OAuth redirect */
