@@ -19,7 +19,7 @@ export function useDerivWebSocket(opts: HookOpts) {
     if (!validatedAppId) {
       const invalidValue = opts.appId ?? "(unset)";
       setErrorMessage(
-        `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a numeric app id such as 1089.`,
+        `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a non-empty string or number.`,
       );
       setStatus("error");
       setConnection(null);

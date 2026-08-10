@@ -29,17 +29,17 @@ export const DERIV_APP_ID: string =
   "1089";
 
 /**
- * Validate and normalize an appId. Returns a numeric-string app id, or null if invalid.
+ * Validate and normalize an appId. Returns a non-empty string app id, or null if invalid.
  */
 export function validateAppId(appId?: string | number | null): string | null {
   const candidate = appId ?? DERIV_APP_ID;
   if (candidate === undefined || candidate === null) return null;
-  const n = Number(String(candidate).trim());
-  if (!Number.isFinite(n) || Number.isNaN(n)) {
-    console.error(`Invalid Deriv app_id provided: ${candidate}. Expected numeric app_id (e.g. 1089).`);
+  const normalized = String(candidate).trim();
+  if (!normalized) {
+    console.error(`Invalid Deriv app_id provided: ${candidate}. app_id must be a non-empty string or number.`);
     return null;
   }
-  return String(Math.trunc(n));
+  return normalized;
 }
 
 /** false = use the real Deriv WebSocket (live prices + account on login) */
