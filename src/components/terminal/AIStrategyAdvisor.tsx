@@ -3,6 +3,7 @@ import { Brain, Clock, Loader2, ShieldAlert, Target } from "lucide-react";
 import { toast } from "sonner";
 import type { Analysis } from "@/lib/analysis";
 import type { Candle } from "@/lib/derivApi";
+import type { DerivSymbol } from "@/lib/derivApi";
 
 export interface StrategyAdvice {
   bestStrategy: string;
@@ -30,20 +31,20 @@ const TIMING_LABEL: Record<StrategyAdvice["timing"], string> = {
 };
 
 export function AIStrategyAdvisor({
-  symbol,
-  timeframe,
-  price,
-  balance,
-  analysis,
-  candles,
-}: {
-  symbol: string;
-  timeframe: string;
-  price: number | undefined;
-  balance: number;
-  analysis: Analysis | null;
-  candles: Candle[];
-}) {
+  symbol, 
+  timeframe, 
+  price, 
+  balance, 
+  analysis, 
+  candles, 
+}: { 
+  symbol: DerivSymbol; 
+  timeframe: string; 
+  price: number | undefined; 
+  balance: number; 
+  analysis: Analysis | null; 
+  candles: Candle[]; 
+}) { 
   const [advice, setAdvice] = useState<StrategyAdvice | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +55,7 @@ export function AIStrategyAdvisor({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symbol,
+          symbol: symbol.code,
           timeframe,
           price,
           balance,
@@ -116,7 +117,7 @@ export function AIStrategyAdvisor({
 
       {!advice && !loading && (
         <p className="text-xs text-muted-foreground">
-          Let Lovable AI review {symbol} on {timeframe} — it picks the best-fitting strategy and tells
+          Let Lovable AI review {symbol.label} on {timeframe} — it picks the best-fitting strategy and tells
           you whether to take the trade now or wait for a trigger.
         </p>
       )}
