@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { getOrigin } from "../lib/og";
 import {
-  buildDerivOAuthUrl,
+  startDerivLogin,
   isDerivOAuthConfigured,
   useDerivOAuth,
   type DerivOAuthAccount,
@@ -192,9 +192,10 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
             <Link to="/terminal" className="flex items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-xs font-bold text-background">
               Open Terminal <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-            <a href={buildDerivOAuthUrl()} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-signal/40">
+            <button type="button" onClick={() => { void startDerivLogin(); }} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-signal/40">
               <RefreshCw className="h-3.5 w-3.5" /> Re-authorise
-            </a>
+            </button>
+
             <button onClick={logout} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:border-bear/50 hover:text-bear">
               <LogOut className="h-3.5 w-3.5" /> Disconnect
             </button>
@@ -210,10 +211,11 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
               </div>
             ))}
           </div>
-          <a href={buildDerivOAuthUrl()}
+          <button type="button" onClick={() => { void startDerivLogin(); }}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-glow transition hover:brightness-110">
             <ExternalLink className="h-4 w-4" /> Login with Deriv
-          </a>
+          </button>
+
           <p className="text-center text-[11px] text-muted-foreground">
             No account?{" "}
             <a href="https://deriv.com/signup/" target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">

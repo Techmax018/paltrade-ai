@@ -18,7 +18,7 @@ import {
   type AutoPilotConfig,
   type AutonomousSignal,
 } from "@/hooks/useAutonomousEngine";
-import { useDerivOAuth, buildDerivOAuthUrl } from "@/hooks/useDerivOAuth";
+import { useDerivOAuth } from "@/hooks/useDerivOAuth";
 import {
   SYMBOLS,
   DERIV_APP_ID,
