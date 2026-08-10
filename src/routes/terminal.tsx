@@ -11,6 +11,7 @@ import { AutoPilotConfigDrawer } from "@/components/terminal/AutoPilotConfig";
 import { AuditLog } from "@/components/terminal/AuditLog";
 import { TradeFeed } from "@/components/terminal/TradeFeed";
 import { BacktestPanel } from "@/components/terminal/BacktestPanel";
+import { AIStrategyAdvisor } from "@/components/terminal/AIStrategyAdvisor";
 
 import {
   useAutonomousEngine,
