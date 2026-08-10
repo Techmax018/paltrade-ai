@@ -5,7 +5,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
-import { buildDerivOAuthUrl, useDerivOAuth } from "@/hooks/useDerivOAuth";
+import { startDerivLogin, useDerivOAuth } from "@/hooks/useDerivOAuth";
 import { PaltradeLoader } from "@/components/PaltradeLoader";
 
 export const Route = createFileRoute("/login")({
