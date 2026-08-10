@@ -190,7 +190,7 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
           ))}
           <div className="flex flex-wrap gap-2 pt-1">
             <Link to="/terminal" className="flex items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-xs font-bold text-background">
-              Open Terminal <ArrowRight className="h-3.5 w-3.5" />
+              Login <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <button type="button" onClick={() => { void startDerivLogin(); }} className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-signal/40">
               <RefreshCw className="h-3.5 w-3.5" /> Re-authorise

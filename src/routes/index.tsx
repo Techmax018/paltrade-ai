@@ -179,7 +179,7 @@ function Nav() {
         <div className="hidden items-center gap-2 md:flex">
           <Link to="/login"
             className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:brightness-110">
-            <Zap className="h-3.5 w-3.5" /> Launch Terminal
+            <Zap className="h-3.5 w-3.5" /> Sign Up
           </Link>
         </div>
 
@@ -217,7 +217,7 @@ function Nav() {
             )}
             <Link to="/login" onClick={() => setOpen(false)}
               className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-glow">
-              <Zap className="h-4 w-4" /> Launch Terminal
+              <Zap className="h-4 w-4" /> Sign Up
             </Link>
           </nav>
         </div>
