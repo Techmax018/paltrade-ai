@@ -325,7 +325,7 @@ function Hero() {
               to="/login"
               className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-glow transition hover:brightness-110"
             >
-              <Zap className="h-4 w-4" /> Open Trading Terminal
+              <Zap className="h-4 w-4" />  Login
             </Link>
             <a
               href="#features"

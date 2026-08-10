@@ -62,7 +62,7 @@ export async function startVantageStream(
 
   const connection = account.getRPCConnection();
   await connection.connect();
-  await connection.waitSynchronized({ timeoutInSeconds: 60 });
+  await connection.waitSynchronized(60);
 
   send(ws, {
     type: "connected",
@@ -95,7 +95,7 @@ export async function startVantageStream(
         type: "account_update",
         broker: "VANTAGE_MT5",
         timestamp: Date.now(),
-        payload: update,
+        payload: update as unknown as Record<string, unknown>,
       });
     },
     onWafHalt: (verdict) => {
@@ -124,7 +124,7 @@ export async function startVantageStream(
 
 
   /* ── 4. Listen for position / deal events ────────────────────────────── */
-  connection.addSynchronizationListener({
+  const syncListener = {
     onDealAdded: (_instanceIndex: string, deal: Record<string, unknown>) => {
       // Fire on every closed deal
       if (deal.type === "DEAL_TYPE_SELL" || deal.type === "DEAL_TYPE_BUY") {
@@ -144,7 +144,11 @@ export async function startVantageStream(
         });
       }
     },
-  } as Parameters<typeof connection.addSynchronizationListener>[0]);
+  };
+
+  if (typeof (connection as any).addSynchronizationListener === "function") {
+    (connection as any).addSynchronizationListener(syncListener);
+  }
 
   /* ── 5. Cleanup function ──────────────────────────────────────────────── */
   return () => {

@@ -29,8 +29,8 @@ export function signToken(payload: JwtPayload): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET not set");
   return jwt.sign(payload, secret, {
-    expiresIn: (process.env.JWT_EXPIRES_IN ?? "24h") as string,
-  });
+    expiresIn: process.env.JWT_EXPIRES_IN ?? "24h",
+  } as any);
 }
 
 export function verifyToken(token: string): JwtPayload {

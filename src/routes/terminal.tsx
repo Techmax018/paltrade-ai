@@ -23,7 +23,6 @@ import { useDerivOAuth } from "@/hooks/useDerivOAuth";
 import {
   SYMBOLS,
   DERIV_APP_ID,
-  connectWebSocket,
   validateAppId,
   type AccountInfo,
   type Candle,
@@ -31,6 +30,7 @@ import {
   type DerivConnection,
   type Timeframe,
 } from "@/lib/derivApi";
+import { useDerivWebSocket } from "@/hooks/useDerivWebSocket";
 import { analyzeMarket, type Analysis } from "@/lib/analysis";
 import {
   playAutoPilotOff,
@@ -94,8 +94,12 @@ function TerminalPage() {
     return { appId: "", token: "", accountType: "demo" };
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [account, setAccount] = useState<AccountInfo | null>(null);
+  const { status, connection, errorMessage } = useDerivWebSocket({
+    appId: settings.appId,
+    token: settings.token,
+    accountType: settings.accountType,
+  });
 
   /* ── Chart / symbol state ────────────────────────────────────────────── */
   const [symbolCode, setSymbolCode] = useState(SYMBOLS[0].code);
@@ -173,33 +177,19 @@ function TerminalPage() {
   }, [history]);
 
   /* ── WebSocket connect / reconnect ───────────────────────────────────── */
-  const validatedAppId = useMemo(() => validateAppId(settings.appId), [settings.appId]);
-
   useEffect(() => {
-    if (!validatedAppId) {
-      setStatus("error");
+    connRef.current = connection;
+    if (!connection) {
       setAccount(null);
-      connRef.current = null;
-      console.error(
-        `Invalid Deriv app_id provided: ${settings.appId ?? "(unset)"}. Please set VITE_DERIV_APP_ID to a numeric app id such as 1089.`,
-      );
       return;
     }
 
-    const conn = connectWebSocket({
-      appId: validatedAppId,
-      token: settings.token,
-      accountType: settings.accountType,
-    });
-    connRef.current = conn;
-    const offStatus = conn.onStatus(setStatus);
-    const offAccount = conn.onAccount(setAccount);
+    const offAccount = connection.onAccount(setAccount);
     return () => {
-      offStatus();
       offAccount();
-      conn.disconnect();
+      connRef.current = null;
     };
-  }, [validatedAppId, settings.token, settings.accountType]);
+  }, [connection]);
 
   /* ── Candle fetch ────────────────────────────────────────────────────── */
   const [seedPrice, setSeedPrice] = useState<number | null>(null);

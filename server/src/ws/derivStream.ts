@@ -17,7 +17,15 @@ import { browserHeaders, WAF_CLIENT_HINT } from "../lib/requestController";
 import { NormalisedFrame, AccountUpdate } from "./types";
 
 const DERIV_WS = "wss://ws.derivws.com/websockets/v3";
-const DERIV_APP_ID = process.env.VITE_DERIV_APP_ID ?? "1089";
+const DERIV_APP_ID = normalizeDerivAppId(process.env.VITE_DERIV_APP_ID ?? "1089");
+
+function normalizeDerivAppId(appId: string): string {
+  const normalized = String(appId ?? "").trim();
+  if (!normalized) {
+    throw new Error("Missing or invalid Deriv app_id. Set VITE_DERIV_APP_ID to a non-empty string.");
+  }
+  return normalized;
+}
 
 function sendToClient(clientWs: WebSocket, frame: NormalisedFrame) {
   if (clientWs.readyState === WebSocket.OPEN) {
@@ -57,13 +65,16 @@ export async function startDerivStream(
   }
 
   /* ── 2. Open Deriv WebSocket with an authentic browser signature ─────── */
-  const derivWs = new WebSocket(`${DERIV_WS}?app_id=${DERIV_APP_ID}`, {
-    headers: {
-      ...browserHeaders({ "Sec-Fetch-Site": "cross-site" }),
-      Origin: "https://app.deriv.com",
+  const derivWs = new WebSocket(
+    `${DERIV_WS}?app_id=${encodeURIComponent(DERIV_APP_ID)}&l=EN&brand=deriv`,
+    {
+      headers: {
+        ...browserHeaders({ "Sec-Fetch-Site": "cross-site" }),
+        Origin: "https://app.deriv.com",
+      },
+      handshakeTimeout: 20_000,
     },
-    handshakeTimeout: 20_000,
-  });
+  );
   let reqId = 1;
 
   function sendDeriv(payload: Record<string, unknown>) {
@@ -129,7 +140,7 @@ export async function startDerivStream(
         type: "account_update",
         broker: "DERIV",
         timestamp: Date.now(),
-        payload: update,
+        payload: update as unknown as Record<string, unknown>,
       });
     }
 

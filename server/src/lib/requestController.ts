@@ -104,9 +104,7 @@ export function markProxyDirty(proxyUrl: string | null) {
  */
 async function proxyDispatcher(proxyUrl: string): Promise<unknown | null> {
   try {
-    const undici = (await import("undici")) as unknown as {
-      ProxyAgent: new (uri: string) => unknown;
-    };
+    const undici = (await import("undici")) as any;
     return new undici.ProxyAgent(proxyUrl);
   } catch {
     return null;

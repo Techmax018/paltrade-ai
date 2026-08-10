@@ -153,7 +153,7 @@ export interface OpenContractUpdate {
 
 export interface ConnectOptions {
   appId: string;
-  token: string;
+  token?: string;
   accountType: AccountType;
 }
 
@@ -374,7 +374,7 @@ class MockDerivConnection implements DerivConnection {
 
 /* ── live WebSocket connection ─────────────────────────────────────────────── */
 class LiveDerivConnection implements DerivConnection {
-  private ws: WebSocket;
+  private ws: WebSocket | null = null;
   private statusCbs = new Set<(s: ConnectionStatus) => void>();
   private accountCbs = new Set<(a: AccountInfo) => void>();
   private pendingRequests = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
@@ -383,29 +383,59 @@ class LiveDerivConnection implements DerivConnection {
   private reqId = 1;
   private account: AccountInfo | null = null;
   private opts: ConnectOptions;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private shouldReconnect = true;
 
   constructor(opts: ConnectOptions) {
     this.opts = opts;
     this.setStatus("connecting");
-    const appIdStr = validateAppId(opts.appId);
+    this.connect();
+  }
+
+  private connect() {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    const appIdStr = validateAppId(this.opts.appId);
     if (!appIdStr) {
       throw new Error("Invalid Deriv app_id passed to LiveDerivConnection");
     }
-    this.ws = new WebSocket(`${DERIV_WS_ENDPOINT}?app_id=${appIdStr}`);
-    // Ensure open transitions directly to connected state when appropriate
+
+    const url = `${DERIV_WS_ENDPOINT}?app_id=${encodeURIComponent(appIdStr)}&l=EN&brand=deriv`;
+    this.ws = new WebSocket(url);
+
     this.ws.onopen = () => {
-      // Only authorize if a token was provided; otherwise just mark connected
-      if (opts.token) {
-        // Keep status as connecting until authorize response arrives
-        this.send({ authorize: opts.token });
+      this.reconnectAttempts = 0;
+      if (this.opts.token) {
+        this.send({ authorize: this.opts.token });
       } else {
-        // Public market data mode — no account, but prices and candles work
         this.setStatus("connected");
       }
     };
+
     this.ws.onmessage = (e) => this.handleMessage(JSON.parse(e.data));
-    this.ws.onerror = () => this.setStatus("error");
-    this.ws.onclose = () => this.setStatus("disconnected");
+    this.ws.onerror = () => {
+      this.setStatus("error");
+    };
+    this.ws.onclose = () => {
+      this.setStatus("disconnected");
+      if (this.shouldReconnect) {
+        this.scheduleReconnect();
+      }
+    };
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    this.reconnectAttempts += 1;
+    const delay = Math.min(1000 * 2 ** (this.reconnectAttempts - 1), 30000);
+    this.setStatus("reconnecting");
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
   }
 
   private nextId() {
@@ -419,7 +449,6 @@ class LiveDerivConnection implements DerivConnection {
         this.ws.send(JSON.stringify(payload));
       }
     } catch (err) {
-      // Swallow send errors and surface via status callback
       this.setStatus("error");
       console.error("WebSocket send error", err);
     }
@@ -617,19 +646,21 @@ class LiveDerivConnection implements DerivConnection {
   }
 
   disconnect() {
-    // Close only if socket exists and is not already closed/closing
+    this.shouldReconnect = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     try {
       if (!this.ws) return;
       if (this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
-        // nothing to do
-      } else {
-        // remove handlers first to avoid cascading events
-        this.ws.onopen = null as unknown as EventListener;
-        this.ws.onmessage = null as unknown as EventListener;
-        this.ws.onerror = null as unknown as EventListener;
-        this.ws.onclose = null as unknown as EventListener;
-        this.ws.close();
+        return;
       }
+      this.ws.onopen = null as unknown as EventListener;
+      this.ws.onmessage = null as unknown as EventListener;
+      this.ws.onerror = null as unknown as EventListener;
+      this.ws.onclose = null as unknown as EventListener;
+      this.ws.close();
     } catch (err) {
       console.warn("Error while closing WebSocket", err);
     } finally {

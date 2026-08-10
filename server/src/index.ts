@@ -122,6 +122,8 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    const brokerType = (broker as { broker_type: "VANTAGE_MT5" | "DERIV" }).broker_type;
+
     /* ── Shared trade-close handler (writes to DB) ────────────────────── */
     async function handleTradeClosed(trade: Record<string, unknown>) {
       try {
@@ -150,9 +152,10 @@ wss.on("connection", (ws) => {
             trade.raw_payload ? JSON.stringify(trade.raw_payload) : null,
           ],
         );
+        const brokerType = (broker as { broker_type: "VANTAGE_MT5" | "DERIV" }).broker_type;
         sendFrame(ws, {
           type: "trade_closed",
-          broker: broker.broker_type as "VANTAGE_MT5" | "DERIV",
+          broker: brokerType,
           timestamp: Date.now(),
           payload: trade,
         });
