@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { getOrigin } from "../lib/og";
 import {
-  buildDerivOAuthUrl,
+  startDerivLogin,
   isDerivOAuthConfigured,
   useDerivOAuth,
   type DerivOAuthAccount,
