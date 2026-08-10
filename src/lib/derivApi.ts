@@ -28,6 +28,17 @@ export const DERIV_APP_ID: string =
       ?.VITE_DERIV_APP_ID) ||
   "1089";
 
+function normalizeAppId(appId: string | number | undefined): string {
+  if (appId === undefined || appId === null) return DERIV_APP_ID;
+  const n = Number(String(appId).trim());
+  if (!Number.isFinite(n) || Number.isNaN(n)) {
+    // Fallback to default numeric app id; log helpful message for debugging
+    console.warn(`Invalid Deriv app_id provided: ${appId}. Falling back to ${DERIV_APP_ID}`);
+    return DERIV_APP_ID;
+  }
+  return String(Math.trunc(n));
+}
+
 /** false = use the real Deriv WebSocket (live prices + account on login) */
 export const USE_MOCK = false;
 
@@ -373,11 +384,13 @@ class LiveDerivConnection implements DerivConnection {
   constructor(opts: ConnectOptions) {
     this.opts = opts;
     this.setStatus("connecting");
-    this.ws = new WebSocket(`${DERIV_WS_ENDPOINT}?app_id=${opts.appId}`);
+    const appIdStr = normalizeAppId(opts.appId);
+    this.ws = new WebSocket(`${DERIV_WS_ENDPOINT}?app_id=${appIdStr}`);
+    // Ensure open transitions directly to connected state when appropriate
     this.ws.onopen = () => {
-      this.setStatus("connecting");
       // Only authorize if a token was provided; otherwise just mark connected
       if (opts.token) {
+        // Keep status as connecting until authorize response arrives
         this.send({ authorize: opts.token });
       } else {
         // Public market data mode — no account, but prices and candles work
@@ -394,8 +407,15 @@ class LiveDerivConnection implements DerivConnection {
   }
 
   private send(payload: Record<string, unknown>) {
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(payload));
+    // Only send when socket is open. Ignore otherwise to prevent exceptions.
+    try {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(payload));
+      }
+    } catch (err) {
+      // Swallow send errors and surface via status callback
+      this.setStatus("error");
+      console.error("WebSocket send error", err);
     }
   }
 
@@ -591,7 +611,24 @@ class LiveDerivConnection implements DerivConnection {
   }
 
   disconnect() {
-    this.ws.close();
+    // Close only if socket exists and is not already closed/closing
+    try {
+      if (!this.ws) return;
+      if (this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+        // nothing to do
+      } else {
+        // remove handlers first to avoid cascading events
+        this.ws.onopen = null as unknown as EventListener;
+        this.ws.onmessage = null as unknown as EventListener;
+        this.ws.onerror = null as unknown as EventListener;
+        this.ws.onclose = null as unknown as EventListener;
+        this.ws.close();
+      }
+    } catch (err) {
+      console.warn("Error while closing WebSocket", err);
+    } finally {
+      this.setStatus("disconnected");
+    }
   }
 }
 
