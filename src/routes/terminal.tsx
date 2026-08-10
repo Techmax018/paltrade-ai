@@ -11,6 +11,7 @@ import { AutoPilotConfigDrawer } from "@/components/terminal/AutoPilotConfig";
 import { AuditLog } from "@/components/terminal/AuditLog";
 import { TradeFeed } from "@/components/terminal/TradeFeed";
 import { BacktestPanel } from "@/components/terminal/BacktestPanel";
+import { AIStrategyAdvisor } from "@/components/terminal/AIStrategyAdvisor";
 
 import {
   useAutonomousEngine,
@@ -496,7 +497,7 @@ function TerminalPage() {
         </div>
 
         {/* ── Right column ─────────────────────────────────────────────── */}
-        <div className={`min-w-0 ${mobileTab === "strategy" ? "block" : "hidden lg:block"}`}>
+        <div className={`min-w-0 space-y-4 ${mobileTab === "strategy" ? "block" : "hidden lg:block"}`}>
           <StrategyPanel
             symbol={symbol}
             price={price}
@@ -508,6 +509,14 @@ function TerminalPage() {
             onToggleTriple={setTripleMode}
             onAnalyze={() => { runAnalysis(); engine.triggerScan(); }}
             onExecute={execute}
+          />
+          <AIStrategyAdvisor
+            symbol={symbol}
+            timeframe={timeframe}
+            price={price}
+            balance={account?.balance ?? 10000}
+            analysis={effectiveAnalysis}
+            candles={candles}
           />
         </div>
 
