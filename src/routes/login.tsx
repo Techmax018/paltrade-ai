@@ -148,19 +148,25 @@ function LoginPage() {
             </div>
 
             {/* Primary OAuth button */}
-            <a href={buildDerivOAuthUrl()}
+            <button type="button" onClick={() => { void startDerivLogin(); }}
               className="group relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl py-3.5 text-sm font-bold tracking-wide"
               style={{
                 background: "linear-gradient(90deg, #0284c7, #06b6d4, #0ea5e9)",
                 boxShadow: "0 0 0 1px rgba(6,182,212,0.35), 0 6px 24px rgba(6,182,212,0.22)",
                 color: "#fff",
-                textDecoration: "none",
               }}>
               <span aria-hidden
                 className="pointer-events-none absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/12 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]" />
               <ExternalLink className="h-4 w-4 shrink-0" />
               Login with Deriv Account
-            </a>
+            </button>
+
+            <button type="button" onClick={() => { void startDerivLogin({ signup: true }); }}
+              className="mt-2 w-full rounded-xl border py-2.5 text-xs font-semibold"
+              style={{ borderColor: "rgba(6,182,212,0.3)", color: "#06b6d4", background: "transparent" }}>
+              Create a Deriv account
+            </button>
+
 
             <p className="mt-2 text-center font-mono text-[10px]"
               style={{ color: "rgba(100,116,139,0.6)" }}>

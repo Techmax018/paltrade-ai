@@ -17,6 +17,7 @@ import { Route as BrokersRouteImport } from './routes/brokers'
 import { Route as BacktestRouteImport } from './routes/backtest'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthDerivCallbackRouteImport } from './routes/auth/deriv/callback'
 import { Route as ApiDerivTokenRouteImport } from './routes/api/deriv/token'
 import { Route as ApiV1BrokerStreamRouteImport } from './routes/api/v1/broker/stream'
 import { Route as ApiV1BrokerServersRouteImport } from './routes/api/v1/broker/servers'
@@ -62,6 +63,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthDerivCallbackRoute = AuthDerivCallbackRouteImport.update({
+  id: '/auth/deriv/callback',
+  path: '/auth/deriv/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDerivTokenRoute = ApiDerivTokenRouteImport.update({
   id: '/api/deriv/token',
   path: '/api/deriv/token',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
+  '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
   '/api/v1/broker/servers': typeof ApiV1BrokerServersRoute
   '/api/v1/broker/stream': typeof ApiV1BrokerStreamRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
+  '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
   '/api/v1/broker/servers': typeof ApiV1BrokerServersRoute
   '/api/v1/broker/stream': typeof ApiV1BrokerStreamRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
+  '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/v1/auth/connect-broker': typeof ApiV1AuthConnectBrokerRoute
   '/api/v1/broker/servers': typeof ApiV1BrokerServersRoute
   '/api/v1/broker/stream': typeof ApiV1BrokerStreamRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/chat'
     | '/api/deriv/token'
+    | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
     | '/api/v1/broker/servers'
     | '/api/v1/broker/stream'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/chat'
     | '/api/deriv/token'
+    | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
     | '/api/v1/broker/servers'
     | '/api/v1/broker/stream'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/chat'
     | '/api/deriv/token'
+    | '/auth/deriv/callback'
     | '/api/v1/auth/connect-broker'
     | '/api/v1/broker/servers'
     | '/api/v1/broker/stream'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   TerminalRoute: typeof TerminalRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiDerivTokenRoute: typeof ApiDerivTokenRoute
+  AuthDerivCallbackRoute: typeof AuthDerivCallbackRoute
   ApiV1AuthConnectBrokerRoute: typeof ApiV1AuthConnectBrokerRoute
   ApiV1BrokerServersRoute: typeof ApiV1BrokerServersRoute
   ApiV1BrokerStreamRoute: typeof ApiV1BrokerStreamRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/deriv/callback': {
+      id: '/auth/deriv/callback'
+      path: '/auth/deriv/callback'
+      fullPath: '/auth/deriv/callback'
+      preLoaderRoute: typeof AuthDerivCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/deriv/token': {
       id: '/api/deriv/token'
       path: '/api/deriv/token'
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   TerminalRoute: TerminalRoute,
   ApiChatRoute: ApiChatRoute,
   ApiDerivTokenRoute: ApiDerivTokenRoute,
+  AuthDerivCallbackRoute: AuthDerivCallbackRoute,
   ApiV1AuthConnectBrokerRoute: ApiV1AuthConnectBrokerRoute,
   ApiV1BrokerServersRoute: ApiV1BrokerServersRoute,
   ApiV1BrokerStreamRoute: ApiV1BrokerStreamRoute,
