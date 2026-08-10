@@ -28,13 +28,16 @@ export const DERIV_APP_ID: string =
       ?.VITE_DERIV_APP_ID) ||
   "1089";
 
-function normalizeAppId(appId: string | number | undefined): string {
-  if (appId === undefined || appId === null) return DERIV_APP_ID;
-  const n = Number(String(appId).trim());
+/**
+ * Validate and normalize an appId. Returns a numeric-string app id, or null if invalid.
+ */
+export function validateAppId(appId?: string | number | null): string | null {
+  const candidate = appId ?? DERIV_APP_ID;
+  if (candidate === undefined || candidate === null) return null;
+  const n = Number(String(candidate).trim());
   if (!Number.isFinite(n) || Number.isNaN(n)) {
-    // Fallback to default numeric app id; log helpful message for debugging
-    console.warn(`Invalid Deriv app_id provided: ${appId}. Falling back to ${DERIV_APP_ID}`);
-    return DERIV_APP_ID;
+    console.error(`Invalid Deriv app_id provided: ${candidate}. Expected numeric app_id (e.g. 1089).`);
+    return null;
   }
   return String(Math.trunc(n));
 }
@@ -384,7 +387,10 @@ class LiveDerivConnection implements DerivConnection {
   constructor(opts: ConnectOptions) {
     this.opts = opts;
     this.setStatus("connecting");
-    const appIdStr = normalizeAppId(opts.appId);
+    const appIdStr = validateAppId(opts.appId);
+    if (!appIdStr) {
+      throw new Error("Invalid Deriv app_id passed to LiveDerivConnection");
+    }
     this.ws = new WebSocket(`${DERIV_WS_ENDPOINT}?app_id=${appIdStr}`);
     // Ensure open transitions directly to connected state when appropriate
     this.ws.onopen = () => {
@@ -643,14 +649,16 @@ class LiveDerivConnection implements DerivConnection {
  *  3. No appId → mock
  */
 export function connectWebSocket(opts: ConnectOptions): DerivConnection {
-  if (USE_MOCK) {
+  if (USE_MOCK) return new MockDerivConnection(opts);
+
+  const appId = validateAppId(opts.appId);
+  if (!appId) {
+    // Prevent attempting a WebSocket connection with an invalid app id.
+    // Fall back to mock and surface a clear error for developers.
+    console.error("connectWebSocket: invalid or missing Deriv app_id — using mock connection.");
     return new MockDerivConnection(opts);
   }
-  const appId = opts.appId || DERIV_APP_ID;
-  if (appId) {
-    return new LiveDerivConnection({ ...opts, appId });
-  }
-  return new MockDerivConnection(opts);
+  return new LiveDerivConnection({ ...opts, appId });
 }
 
 /* ── indicators ────────────────────────────────────────────────────────────── */

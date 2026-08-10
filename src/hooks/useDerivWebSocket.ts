@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { connectWebSocket } from "@/lib/derivApi";
+import { useEffect, useMemo, useState } from "react";
+import { connectWebSocket, validateAppId } from "@/lib/derivApi";
 import type { DerivConnection, ConnectionStatus } from "@/lib/derivApi";
 
 interface HookOpts {
@@ -9,47 +9,53 @@ interface HookOpts {
 }
 
 export function useDerivWebSocket(opts: HookOpts) {
-  const connRef = useRef<DerivConnection | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [connection, setConnection] = useState<DerivConnection | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const validatedAppId = useMemo(() => validateAppId(opts.appId), [opts.appId]);
 
   useEffect(() => {
-    let mounted = true;
+    if (!validatedAppId) {
+      const invalidValue = opts.appId ?? "(unset)";
+      setErrorMessage(
+        `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a numeric app id such as 1089.`,
+      );
+      setStatus("error");
+      setConnection(null);
+      return;
+    }
+
+    setErrorMessage(null);
     setStatus("connecting");
 
-    // Create a connection instance; connectWebSocket will pick mock if no valid appId
-    const conn = connectWebSocket({ appId: opts.appId, token: opts.token, accountType: opts.accountType ?? "demo" });
-    connRef.current = conn;
-
-    // subscribe to status updates
-    const un = conn.onStatus((s) => {
-      if (!mounted) return;
-      setStatus(s);
+    const conn = connectWebSocket({
+      appId: validatedAppId,
+      token: opts.token,
+      accountType: opts.accountType ?? "demo",
     });
+    setConnection(conn);
 
-    // Clean-up: disconnect only once when component unmounts
+    const offStatus = conn.onStatus((s) => setStatus(s));
+
     return () => {
-      mounted = false;
-      try {
-        un();
-      } catch {}
+      offStatus();
       try {
         conn.disconnect();
       } catch (err) {
         console.warn("Error disconnecting Deriv connection on unmount", err);
       }
-      connRef.current = null;
+      setConnection(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts.appId, opts.token]);
+  }, [validatedAppId, opts.token, opts.accountType]);
 
-  // Safe send helper
   function safeSend(payload: Record<string, unknown>) {
-    const c = connRef.current;
+    if (!connection) {
+      console.warn("Cannot send over Deriv WebSocket: no active connection.");
+      return;
+    }
     try {
-      if (c) {
-        // rely on connection to guard send
-        (c as any).send?.(payload);
-      }
+      (connection as any).send?.(payload);
     } catch (err) {
       console.warn("safeSend failed", err);
     }
@@ -57,7 +63,8 @@ export function useDerivWebSocket(opts: HookOpts) {
 
   return {
     status,
-    connection: connRef.current,
+    connection,
+    errorMessage,
     safeSend,
   } as const;
 }

@@ -24,6 +24,7 @@ import {
   SYMBOLS,
   DERIV_APP_ID,
   connectWebSocket,
+  validateAppId,
   type AccountInfo,
   type Candle,
   type ConnectionStatus,
@@ -172,9 +173,21 @@ function TerminalPage() {
   }, [history]);
 
   /* ── WebSocket connect / reconnect ───────────────────────────────────── */
+  const validatedAppId = useMemo(() => validateAppId(settings.appId), [settings.appId]);
+
   useEffect(() => {
+    if (!validatedAppId) {
+      setStatus("error");
+      setAccount(null);
+      connRef.current = null;
+      console.error(
+        `Invalid Deriv app_id provided: ${settings.appId ?? "(unset)"}. Please set VITE_DERIV_APP_ID to a numeric app id such as 1089.`,
+      );
+      return;
+    }
+
     const conn = connectWebSocket({
-      appId: settings.appId,
+      appId: validatedAppId,
       token: settings.token,
       accountType: settings.accountType,
     });
@@ -186,7 +199,7 @@ function TerminalPage() {
       offAccount();
       conn.disconnect();
     };
-  }, [settings.appId, settings.token, settings.accountType]);
+  }, [validatedAppId, settings.token, settings.accountType]);
 
   /* ── Candle fetch ────────────────────────────────────────────────────── */
   const [seedPrice, setSeedPrice] = useState<number | null>(null);
