@@ -384,7 +384,7 @@ export function useDerivOAuth(): UseDerivOAuthResult {
     accounts,
     activeAccount,
     setActiveAccount,
-    isAuthenticated: !!activeAccount,
+    isAuthenticated: !!activeAccount || !!session?.accessToken,
     loading,
     logout,
   };
