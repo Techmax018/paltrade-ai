@@ -80,7 +80,7 @@ export function getDerivRedirectUri(): string {
   const configured = env("VITE_DERIV_REDIRECT_URI");
   if (configured) return configured;
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}/auth/deriv/callback`;
+  return `${window.location.origin}/api/auth/deriv/callback`;
 }
 
 /**
@@ -124,10 +124,10 @@ export async function buildDerivAuthorizeUrl(opts?: {
   return `${AUTHORIZE_ENDPOINT}?${params.toString()}`;
 }
 
-/** Kick off the Deriv login (or signup) redirect. */
-export async function startDerivLogin(opts?: { signup?: boolean }): Promise<void> {
-  const url = await buildDerivAuthorizeUrl(opts);
-  window.location.href = url;
+/** Kick off the Deriv login flow through the server-side start route. */
+export function startDerivLogin(opts?: { signup?: boolean }): void {
+  const query = opts?.signup ? "?signup=1" : "";
+  window.location.href = `/api/auth/deriv/start${query}`;
 }
 
 /**

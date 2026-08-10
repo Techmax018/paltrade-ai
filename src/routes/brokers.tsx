@@ -171,9 +171,9 @@ function DerivCard({ oauth }: { oauth: ReturnType<typeof useDerivOAuth> }) {
           </a>{" "}
           create an app, set its <span className="font-mono">Redirect URL</span> to{" "}
           <span className="font-mono">
-            {typeof window !== "undefined" ? `${window.location.origin}/brokers` : "https://your-domain/brokers"}
+            {typeof window !== "undefined" ? `${window.location.origin}/api/auth/deriv/callback` : "https://your-domain/api/auth/deriv/callback"}
           </span>
-          , then set <span className="font-mono">VITE_DERIV_APP_ID</span> to that app id and redeploy.
+          , then set <span className="font-mono">VITE_DERIV_APP_ID</span> to that app id and configure <span className="font-mono">DERIV_CLIENT_SECRET</span> in Vercel.
         </div>
       )}
 
