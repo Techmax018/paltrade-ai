@@ -162,7 +162,7 @@ export function AIStrategyAdvisor({
           )}
 
           <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Invalidation：</span> {advice.invalidation}
+            <span className="font-semibold text-foreground">Invalidation:</span> {advice.invalidation}
           </p>
           <p className="flex gap-2 rounded-md border border-bear/30 bg-bear/5 p-2 text-xs text-muted-foreground">
             <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-bear" />
