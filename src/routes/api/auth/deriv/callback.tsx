@@ -193,7 +193,10 @@ export const Route = createFileRoute("/api/auth/deriv/callback")({
         headers.append("Set-Cookie", buildCookie("deriv_pkce_state", "", 0));
         headers.append("Set-Cookie", buildCookie("deriv_pkce_verifier", "", 0));
 
-        return new Response(buildSuccessHtml(payload), { status: 200, headers });
+        return new Response(
+          buildSuccessHtml({ ...payload, access_token: payload.access_token }),
+          { status: 200, headers },
+        );
       },
     },
   },
