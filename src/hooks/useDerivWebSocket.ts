@@ -4,6 +4,7 @@ import type { DerivConnection, ConnectionStatus } from "@/lib/derivApi";
 
 interface HookOpts {
   appId?: string | number;
+  accountId?: string;
   token?: string;
   accountType?: "demo" | "real";
 }
@@ -27,6 +28,16 @@ export function useDerivWebSocket(opts: HookOpts) {
       return;
     }
 
+    if (opts.token && !validatedAppId) {
+      const invalidValue = opts.appId ?? "(unset)";
+      setErrorMessage(
+        `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a non-empty string or number.`,
+      );
+      setStatus("error");
+      setConnection(null);
+      return;
+    }
+
     if (!validatedAppId) {
       setErrorMessage("Deriv App ID must contain digits only. Create an app in the Deriv dashboard; do not paste an API token here.");
       setStatus("error");
@@ -38,7 +49,8 @@ export function useDerivWebSocket(opts: HookOpts) {
     setStatus("connecting");
 
     const conn = connectWebSocket({
-      appId: validatedAppId,
+      appId: validatedAppId ?? undefined,
+      accountId: opts.accountId,
       token: opts.token,
       accountType: opts.accountType ?? "demo",
     });
@@ -55,15 +67,20 @@ export function useDerivWebSocket(opts: HookOpts) {
       }
       setConnection(null);
     };
-  }, [normalizedInput, validatedAppId, opts.token, opts.accountType]);
+  }, [normalizedInput, validatedAppId, opts.token, opts.accountId, opts.accountType]);
 
   function safeSend(payload: Record<string, unknown>) {
     if (!connection) {
       console.warn("Cannot send over Deriv WebSocket: no active connection.");
       return;
     }
+    const sendable = connection as unknown as { send?: (payload: Record<string, unknown>) => void };
+    if (typeof sendable.send !== "function") {
+      console.warn("Cannot send over Deriv WebSocket: connection is not sendable.");
+      return;
+    }
     try {
-      (connection as any).send?.(payload);
+      sendable.send(payload);
     } catch (err) {
       console.warn("safeSend failed", err);
     }

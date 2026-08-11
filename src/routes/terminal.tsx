@@ -91,13 +91,14 @@ function TerminalPage() {
   /* ── API / connection settings ───────────────────────────────────────── */
   const [settings, setSettings] = useState<SettingsValues>(() => {
     // Seed from OAuth session if available, otherwise empty (will be filled below)
-    return { appId: "", token: "", accountType: "demo" };
+    return { appId: "", token: "", accountId: "", accountType: "demo" };
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const { status, connection, errorMessage } = useDerivWebSocket({
     appId: settings.appId,
     token: settings.token,
+    accountId: settings.accountId,
     accountType: settings.accountType,
   });
 
@@ -146,15 +147,21 @@ function TerminalPage() {
         if (
           prev.token === oauth.activeAccount!.token &&
           prev.accountType === accountType &&
-          prev.appId === appId
+          prev.appId === appId &&
+          prev.accountId === oauth.activeAccount!.loginid
         ) return prev;
-        return { appId, token: oauth.activeAccount!.token, accountType };
+        return {
+          appId,
+          token: oauth.activeAccount!.token,
+          accountId: oauth.activeAccount!.loginid,
+          accountType,
+        };
       });
     } else {
       // No OAuth session — connect with no token (market data / ticks only)
       setSettings((prev) => {
-        if (prev.appId === appId && prev.token === "") return prev;
-        return { appId, token: "", accountType: "demo" };
+        if (prev.appId === appId && prev.token === "" && prev.accountId === "") return prev;
+        return { appId, token: "", accountId: "", accountType: "demo" };
       });
     }
   }, [oauth.activeAccount, oauth.loading]);

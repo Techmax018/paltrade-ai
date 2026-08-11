@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 export interface SettingsValues {
   appId: string;
   token: string;
+  accountId: string;
   accountType: AccountType;
 }
 
@@ -23,6 +24,7 @@ export function SettingsModal({
 }) {
   const [appId, setAppId] = useState(values.appId);
   const [token, setToken] = useState(values.token);
+  const [accountId, setAccountId] = useState(values.accountId);
   const [accountType, setAccountType] = useState<AccountType>(values.accountType);
   const appIdValid = validateAppId(appId) !== null;
 
@@ -31,9 +33,10 @@ export function SettingsModal({
     if (open) {
       setAppId(values.appId);
       setToken(values.token);
+      setAccountId(values.accountId);
       setAccountType(values.accountType);
     }
-  }, [open, values.appId, values.token, values.accountType]);
+  }, [open, values.appId, values.token, values.accountId, values.accountType]);
 
   if (!open) return null;
 
@@ -63,6 +66,16 @@ export function SettingsModal({
             {appId && !appIdValid && (
               <span className="mt-1 block text-xs text-bear">Use the numeric Deriv App ID, not an API token.</span>
             )}
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Deriv Account ID</span>
+            <input
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              placeholder="e.g. CR123456 or VRTC123456"
+              className="mt-1.5 w-full rounded-md bg-input px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
           </label>
 
           <label className="block">
@@ -108,7 +121,7 @@ export function SettingsModal({
           </Button>
           <Button
             type="button"
-            onClick={() => onSave({ appId, token, accountType })}
+            onClick={() => onSave({ appId, token, accountId, accountType })}
             disabled={!appIdValid}
           >
             Save & Connect
