@@ -735,6 +735,7 @@ function Footer() {
             <Link to="/terminal" className="hover:text-foreground">Terminal</Link>
             <Link to="/backtest" className="hover:text-foreground">Backtest</Link>
             <Link to="/brokers" className="hover:text-foreground">Brokers</Link>
+            <Link to="/synthetics" className="hover:text-foreground">Synthetics</Link>
             <Link to="/calculator" className="hover:text-foreground">Calculator</Link>
           </div>
         </div>
