@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as SyntheticsRouteImport } from './routes/synthetics'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CalculatorRouteImport } from './routes/calculator'
@@ -29,6 +30,11 @@ import { Route as ApiAuthDerivCallbackRouteImport } from './routes/api/auth/deri
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
   path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyntheticsRoute = SyntheticsRouteImport.update({
+  id: '/synthetics',
+  path: '/synthetics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/calculator': typeof CalculatorRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/calculator': typeof CalculatorRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/calculator': typeof CalculatorRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/login'
     | '/sitemap.xml'
+    | '/synthetics'
     | '/terminal'
     | '/api/chat'
     | '/api/ai/strategy'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/login'
     | '/sitemap.xml'
+    | '/synthetics'
     | '/terminal'
     | '/api/chat'
     | '/api/ai/strategy'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/login'
     | '/sitemap.xml'
+    | '/synthetics'
     | '/terminal'
     | '/api/chat'
     | '/api/ai/strategy'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   CalculatorRoute: typeof CalculatorRoute
   LoginRoute: typeof LoginRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SyntheticsRoute: typeof SyntheticsRoute
   TerminalRoute: typeof TerminalRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiAiStrategyRoute: typeof ApiAiStrategyRoute
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/terminal'
       fullPath: '/terminal'
       preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/synthetics': {
+      id: '/synthetics'
+      path: '/synthetics'
+      fullPath: '/synthetics'
+      preLoaderRoute: typeof SyntheticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorRoute: CalculatorRoute,
   LoginRoute: LoginRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SyntheticsRoute: SyntheticsRoute,
   TerminalRoute: TerminalRoute,
   ApiChatRoute: ApiChatRoute,
   ApiAiStrategyRoute: ApiAiStrategyRoute,
