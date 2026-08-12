@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Activity, Bolt, Clock, Flame, LineChart, ShieldAlert, Waves } from "lucide-react";
 import { getOrigin } from "../lib/og";
+import { SyntheticMarketScanner } from "@/components/synthetics/SyntheticMarketScanner";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/synthetics")({
   loader: async () => ({ origin: await getOrigin() }),
@@ -229,6 +231,7 @@ function SyntheticsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Toaster position="top-right" richColors />
       <header className="border-b border-border/60">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link to="/" className="text-lg font-black tracking-tight">
@@ -258,6 +261,8 @@ function SyntheticsPage() {
             risk and discipline. Below is the behaviour of each family and the strategy that fits it.
           </p>
         </section>
+
+        <SyntheticMarketScanner />
 
         {/* Filters */}
         <div className="mt-8 flex flex-wrap gap-2">
