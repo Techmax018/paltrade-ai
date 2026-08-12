@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { X, KeyRound, ShieldCheck } from "lucide-react";
 import type { AccountType } from "@/lib/derivApi";
+import { validateAppId } from "@/lib/derivApi";
+import { Button } from "@/components/ui/button";
 
 export interface SettingsValues {
   appId: string;
@@ -22,6 +24,7 @@ export function SettingsModal({
   const [appId, setAppId] = useState(values.appId);
   const [token, setToken] = useState(values.token);
   const [accountType, setAccountType] = useState<AccountType>(values.accountType);
+  const appIdValid = validateAppId(appId) !== null;
 
   // Sync from props each time the modal opens so stale state is never shown
   useEffect(() => {
@@ -51,11 +54,15 @@ export function SettingsModal({
           <label className="block">
             <span className="text-xs font-medium text-muted-foreground">Deriv App ID</span>
             <input
+              inputMode="numeric"
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
               placeholder="e.g. 1089"
               className="mt-1.5 w-full rounded-md bg-input px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
             />
+            {appId && !appIdValid && (
+              <span className="mt-1 block text-xs text-bear">Use the numeric Deriv App ID, not an API token.</span>
+            )}
           </label>
 
           <label className="block">
@@ -96,15 +103,16 @@ export function SettingsModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-background">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
             onClick={() => onSave({ appId, token, accountType })}
-            className="rounded-md bg-signal px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+            disabled={!appIdValid}
           >
             Save & Connect
-          </button>
+          </Button>
         </div>
       </div>
     </div>

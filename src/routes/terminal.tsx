@@ -136,8 +136,8 @@ function TerminalPage() {
     const appId =
       (typeof import.meta !== "undefined"
         ? ((import.meta as unknown as { env?: Record<string, string> }).env
-            ?.VITE_DERIV_APP_ID)
-        : undefined) ?? DERIV_APP_ID;
+            ?.VITE_DERIV_APP_ID?.trim())
+        : undefined) || DERIV_APP_ID;
 
     if (oauth.activeAccount) {
       // Full OAuth session — user's real token for account + trading access
@@ -402,7 +402,7 @@ function TerminalPage() {
   const effectiveAnalysis = analysis ?? engine.latestAnalysis;
 
   /* ── Connection gate — show onboarding screen if no account linked ───── */
-  const hasCredentials = !!(settings.appId || settings.token);
+  const hasCredentials = !!validateAppId(settings.appId);
   const hasBrokerConnection = oauth.isAuthenticated || (() => {
     if (typeof window === "undefined") return false;
     try {

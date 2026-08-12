@@ -20,13 +20,13 @@ export const DERIV_WS_ENDPOINT = "wss://ws.derivws.com/websockets/v3";
 /**
  * Deriv App ID — read from VITE_DERIV_APP_ID environment variable.
  * Set in Vercel project settings (already configured).
- * Falls back to 1089 (Deriv public demo) for local dev without a .env file.
+ * No public fallback is used because an app ID must belong to this deployment.
  */
 export const DERIV_APP_ID: string =
   (typeof import.meta !== "undefined" &&
     (import.meta as unknown as { env?: Record<string, string> }).env
-      ?.VITE_DERIV_APP_ID) ||
-  "1089";
+      ?.VITE_DERIV_APP_ID?.trim()) ||
+  "";
 
 /**
  * Validate and normalize an appId. Returns a non-empty string app id, or null if invalid.
@@ -35,10 +35,7 @@ export function validateAppId(appId?: string | number | null): string | null {
   const candidate = appId ?? DERIV_APP_ID;
   if (candidate === undefined || candidate === null) return null;
   const normalized = String(candidate).trim();
-  if (!normalized) {
-    console.error(`Invalid Deriv app_id provided: ${candidate}. app_id must be a non-empty string or number.`);
-    return null;
-  }
+  if (!normalized || !/^\d+$/.test(normalized)) return null;
   return normalized;
 }
 
@@ -66,9 +63,17 @@ export const SYMBOLS: DerivSymbol[] = [
   { code: "frxEURUSD", label: "EUR/USD", kind: "forex", pipSize: 0.0001, pipValuePerLot: 10, basePrice: 1.0842, volatility: 0.9 },
   { code: "frxGBPUSD", label: "GBP/USD", kind: "forex", pipSize: 0.0001, pipValuePerLot: 10, basePrice: 1.2715, volatility: 1.1 },
   { code: "frxUSDJPY", label: "USD/JPY", kind: "forex", pipSize: 0.01, pipValuePerLot: 9.1, basePrice: 156.32, volatility: 1.0 },
+  { code: "R_10", label: "Volatility 10 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 8200, volatility: 0.8 },
+  { code: "R_25", label: "Volatility 25 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 3100, volatility: 1.2 },
+  { code: "R_50", label: "Volatility 50 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 5200, volatility: 1.8 },
   { code: "R_100", label: "Volatility 100 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 1420.55, volatility: 3.4 },
   { code: "R_75", label: "Volatility 75 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 98450.2, volatility: 2.8 },
+  { code: "1HZ75V", label: "Volatility 75 (1s) Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 46200, volatility: 3.5 },
+  { code: "CRASH500", label: "Crash 500 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 10500, volatility: 2.6 },
+  { code: "CRASH1000", label: "Crash 1000 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 6900, volatility: 2.2 },
+  { code: "BOOM500", label: "Boom 500 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 14800, volatility: 2.6 },
   { code: "BOOM1000", label: "Boom 1000 Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 9120.7, volatility: 2.2 },
+  { code: "stpRNG", label: "Step Index", kind: "synthetic", pipSize: 0.01, pipValuePerLot: 10, basePrice: 8400, volatility: 1.1 },
 ];
 
 export const TIMEFRAME_SECONDS: Record<Timeframe, number> = { M1: 60, M5: 300, M15: 900, H1: 3600 };
@@ -386,6 +391,8 @@ class LiveDerivConnection implements DerivConnection {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = true;
+  private openedOnce = false;
+  private readonly maxReconnectAttempts = 3;
 
   constructor(opts: ConnectOptions) {
     this.opts = opts;
@@ -407,6 +414,7 @@ class LiveDerivConnection implements DerivConnection {
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
+      this.openedOnce = true;
       this.reconnectAttempts = 0;
       if (this.opts.token) {
         this.send({ authorize: this.opts.token });
@@ -420,9 +428,15 @@ class LiveDerivConnection implements DerivConnection {
       this.setStatus("error");
     };
     this.ws.onclose = () => {
+      this.ws = null;
       this.setStatus("disconnected");
-      if (this.shouldReconnect) {
+      // A socket that never opened usually means an invalid app ID, blocked
+      // handshake, or network policy. Do not hammer Deriv with retries.
+      if (this.shouldReconnect && this.openedOnce && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.scheduleReconnect();
+      } else if (this.shouldReconnect) {
+        this.shouldReconnect = false;
+        this.setStatus("error");
       }
     };
   }
@@ -686,7 +700,7 @@ export function connectWebSocket(opts: ConnectOptions): DerivConnection {
   if (!appId) {
     // Prevent attempting a WebSocket connection with an invalid app id.
     // Fall back to mock and surface a clear error for developers.
-    console.error("connectWebSocket: invalid or missing Deriv app_id — using mock connection.");
+    console.error("connectWebSocket: invalid or missing numeric Deriv app_id — using mock connection.");
     return new MockDerivConnection(opts);
   }
   return new LiveDerivConnection({ ...opts, appId });
