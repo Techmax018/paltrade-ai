@@ -13,14 +13,22 @@ export function useDerivWebSocket(opts: HookOpts) {
   const [connection, setConnection] = useState<DerivConnection | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const validatedAppId = useMemo(() => validateAppId(opts.appId), [opts.appId]);
+  const normalizedInput = useMemo(() => String(opts.appId ?? "").trim(), [opts.appId]);
+  const validatedAppId = useMemo(
+    () => (normalizedInput ? validateAppId(normalizedInput) : null),
+    [normalizedInput],
+  );
 
   useEffect(() => {
+    if (!normalizedInput) {
+      setErrorMessage(null);
+      setStatus("disconnected");
+      setConnection(null);
+      return;
+    }
+
     if (!validatedAppId) {
-      const invalidValue = opts.appId ?? "(unset)";
-      setErrorMessage(
-        `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a non-empty string or number.`,
-      );
+      setErrorMessage("Deriv App ID must contain digits only. Create an app in the Deriv dashboard; do not paste an API token here.");
       setStatus("error");
       setConnection(null);
       return;
@@ -47,7 +55,7 @@ export function useDerivWebSocket(opts: HookOpts) {
       }
       setConnection(null);
     };
-  }, [validatedAppId, opts.token, opts.accountType]);
+  }, [normalizedInput, validatedAppId, opts.token, opts.accountType]);
 
   function safeSend(payload: Record<string, unknown>) {
     if (!connection) {
