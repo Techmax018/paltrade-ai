@@ -126,23 +126,29 @@ export async function startDerivStream(
     try { msg = JSON.parse(raw.toString()); }
     catch { return; }
 
-    const msgType = msg.msg_type as string;
+    const msgType = msg.msg_type as string | undefined;
+    if (!msgType) {
+      if (msg.error) {
+        console.warn("Deriv WS Warning/Error:", msg.error);
+      }
+      return;
+    }
 
     if (msgType === "authorize") {
-      const auth = msg.authorize as Record<string, unknown>;
-      currentCurrency = (auth.currency as string) ?? "USD";
-      currentBalance  = (auth.balance as number) ?? 0;
+      const auth = msg.authorize as Record<string, unknown> | undefined;
+      currentCurrency = (auth?.currency as string) ?? "USD";
+      currentBalance  = (auth?.balance as number) ?? 0;
 
-      sendConnectedEvent(auth.loginid as string, currentCurrency);
+      sendConnectedEvent(auth?.loginid as string | undefined, currentCurrency);
       sendDeriv({ balance: 1, subscribe: 1 });
       sendDeriv({ proposal_open_contract: 1, subscribe: 1 });
     }
 
     if (msgType === "balance") {
-      const b = msg.balance as Record<string, unknown>;
-      currentCurrency = (b.currency as string) ?? currentCurrency;
-      currentBalance = b.balance as number;
-      sendConnectedEvent(b.loginid as string, currentCurrency);
+      const b = msg.balance as Record<string, unknown> | undefined;
+      currentCurrency = (b?.currency as string) ?? currentCurrency;
+      currentBalance = b?.balance as number ?? currentBalance;
+      sendConnectedEvent(b?.loginid as string | undefined, currentCurrency);
 
       // Deriv balance API doesn't expose equity/margin directly —
       // synthesise a normalised frame with available data

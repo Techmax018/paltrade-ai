@@ -468,9 +468,7 @@ class LiveDerivConnection implements DerivConnection {
     this.ws.onopen = () => {
       this.openedOnce = true;
       this.reconnectAttempts = 0;
-      if (!this.opts.token) {
-        this.setStatus("connected");
-      }
+      this.setStatus("connected");
     };
 
     this.ws.onmessage = (e) => {
@@ -562,6 +560,13 @@ class LiveDerivConnection implements DerivConnection {
     }
 
     const msgType = msg.msg_type as string | undefined;
+    if (!msgType) {
+      if (msg.error) {
+        console.warn("Deriv WS Warning/Error:", msg.error);
+      }
+      return;
+    }
+
     if (msgType === "authorize") {
       if (msg.error) {
         console.error("Deriv Auth Error:", (msg.error as { message?: string }).message);
@@ -591,6 +596,29 @@ class LiveDerivConnection implements DerivConnection {
         const t: Tick = { symbol, time, quote };
         this.tickCbs.get(t.symbol)?.forEach((cb) => cb(t));
       }
+    }
+
+    if (msgType === "balance") {
+      const balance = msg.balance as Record<string, unknown> | undefined;
+      if (balance) {
+        const currency = balance.currency as string | undefined;
+        const amount = balance.balance as number | undefined;
+        if (amount !== undefined) {
+          this.account = {
+            loginid: this.account?.loginid ?? "",
+            accountType: this.opts.accountType,
+            currency: currency ?? this.account?.currency ?? "USD",
+            balance: amount,
+            equity: amount,
+            leverage: this.account?.leverage ?? 100,
+          };
+          this.accountCbs.forEach((cb) => cb(this.account!));
+        }
+      }
+    }
+
+    if (msg.error) {
+      console.warn("Deriv WS Warning/Error:", msg.error);
     }
 
     if (msgType === "proposal_open_contract") {
