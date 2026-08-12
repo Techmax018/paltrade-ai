@@ -1,0 +1,173 @@
+From 79f512038c4c8f83023a56405b93c103d62f50bd Mon Sep 17 00:00:00 2001
+From: Techmax018 <maxnjuguna18@gmail.com>
+Date: Tue, 11 Aug 2026 16:56:05 +0300
+Subject: [PATCH] deriv: use OTP WebSocket auth; pass accountId through
+ settings and hook
+
+---
+ src/components/terminal/SettingsModal.tsx | 17 +++++++++++++++--
+ src/hooks/useDerivWebSocket.ts            | 15 +++++++++++----
+ src/routes/terminal.tsx                   | 17 ++++++++++++-----
+ 3 files changed, 38 insertions(+), 11 deletions(-)
+
+diff --git a/src/components/terminal/SettingsModal.tsx b/src/components/terminal/SettingsModal.tsx
+index 8005716..fa6ec4d 100644
+--- a/src/components/terminal/SettingsModal.tsx
++++ b/src/components/terminal/SettingsModal.tsx
+@@ -5,6 +5,7 @@ import type { AccountType } from "@/lib/derivApi";
+ export interface SettingsValues {
+   appId: string;
+   token: string;
++  accountId: string;
+   accountType: AccountType;
+ }
+ 
+@@ -21,6 +22,7 @@ export function SettingsModal({
+ }) {
+   const [appId, setAppId] = useState(values.appId);
+   const [token, setToken] = useState(values.token);
++  const [accountId, setAccountId] = useState(values.accountId);
+   const [accountType, setAccountType] = useState<AccountType>(values.accountType);
+ 
+   // Sync from props each time the modal opens so stale state is never shown
+@@ -28,9 +30,10 @@ export function SettingsModal({
+     if (open) {
+       setAppId(values.appId);
+       setToken(values.token);
++      setAccountId(values.accountId);
+       setAccountType(values.accountType);
+     }
+-  }, [open, values.appId, values.token, values.accountType]);
++  }, [open, values.appId, values.token, values.accountId, values.accountType]);
+ 
+   if (!open) return null;
+ 
+@@ -58,6 +61,16 @@ export function SettingsModal({
+             />
+           </label>
+ 
++          <label className="block">
++            <span className="text-xs font-medium text-muted-foreground">Deriv Account ID</span>
++            <input
++              value={accountId}
++              onChange={(e) => setAccountId(e.target.value)}
++              placeholder="e.g. CR123456 or VRTC123456"
++              className="mt-1.5 w-full rounded-md bg-input px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
++            />
++          </label>
++
+           <label className="block">
+             <span className="text-xs font-medium text-muted-foreground">Deriv API Token</span>
+             <div className="relative mt-1.5">
+@@ -100,7 +113,7 @@ export function SettingsModal({
+             Cancel
+           </button>
+           <button
+-            onClick={() => onSave({ appId, token, accountType })}
++            onClick={() => onSave({ appId, token, accountId, accountType })}
+             className="rounded-md bg-signal px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+           >
+             Save & Connect
+diff --git a/src/hooks/useDerivWebSocket.ts b/src/hooks/useDerivWebSocket.ts
+index 891f677..2b5e39c 100644
+--- a/src/hooks/useDerivWebSocket.ts
++++ b/src/hooks/useDerivWebSocket.ts
+@@ -4,6 +4,7 @@ import type { DerivConnection, ConnectionStatus } from "@/lib/derivApi";
+ 
+ interface HookOpts {
+   appId?: string | number;
++  accountId?: string;
+   token?: string;
+   accountType?: "demo" | "real";
+ }
+@@ -16,7 +17,7 @@ export function useDerivWebSocket(opts: HookOpts) {
+   const validatedAppId = useMemo(() => validateAppId(opts.appId), [opts.appId]);
+ 
+   useEffect(() => {
+-    if (!validatedAppId) {
++    if (opts.token && !validatedAppId) {
+       const invalidValue = opts.appId ?? "(unset)";
+       setErrorMessage(
+         `Invalid Deriv app_id provided: ${invalidValue}. Please set VITE_DERIV_APP_ID to a non-empty string or number.`,
+@@ -30,7 +31,8 @@ export function useDerivWebSocket(opts: HookOpts) {
+     setStatus("connecting");
+ 
+     const conn = connectWebSocket({
+-      appId: validatedAppId,
++      appId: validatedAppId ?? undefined,
++      accountId: opts.accountId,
+       token: opts.token,
+       accountType: opts.accountType ?? "demo",
+     });
+@@ -47,15 +49,20 @@ export function useDerivWebSocket(opts: HookOpts) {
+       }
+       setConnection(null);
+     };
+-  }, [validatedAppId, opts.token, opts.accountType]);
++  }, [validatedAppId, opts.appId, opts.token, opts.accountId, opts.accountType]);
+ 
+   function safeSend(payload: Record<string, unknown>) {
+     if (!connection) {
+       console.warn("Cannot send over Deriv WebSocket: no active connection.");
+       return;
+     }
++    const sendable = connection as unknown as { send?: (payload: Record<string, unknown>) => void };
++    if (typeof sendable.send !== "function") {
++      console.warn("Cannot send over Deriv WebSocket: connection is not sendable.");
++      return;
++    }
+     try {
+-      (connection as any).send?.(payload);
++      sendable.send(payload);
+     } catch (err) {
+       console.warn("safeSend failed", err);
+     }
+diff --git a/src/routes/terminal.tsx b/src/routes/terminal.tsx
+index 644164f..42cfda9 100644
+--- a/src/routes/terminal.tsx
++++ b/src/routes/terminal.tsx
+@@ -91,13 +91,14 @@ function TerminalPage() {
+   /* ── API / connection settings ───────────────────────────────────────── */
+   const [settings, setSettings] = useState<SettingsValues>(() => {
+     // Seed from OAuth session if available, otherwise empty (will be filled below)
+-    return { appId: "", token: "", accountType: "demo" };
++    return { appId: "", token: "", accountId: "", accountType: "demo" };
+   });
+   const [settingsOpen, setSettingsOpen] = useState(false);
+   const [account, setAccount] = useState<AccountInfo | null>(null);
+   const { status, connection, errorMessage } = useDerivWebSocket({
+     appId: settings.appId,
+     token: settings.token,
++    accountId: settings.accountId,
+     accountType: settings.accountType,
+   });
+ 
+@@ -146,15 +147,21 @@ function TerminalPage() {
+         if (
+           prev.token === oauth.activeAccount!.token &&
+           prev.accountType === accountType &&
+-          prev.appId === appId
++          prev.appId === appId &&
++          prev.accountId === oauth.activeAccount!.loginid
+         ) return prev;
+-        return { appId, token: oauth.activeAccount!.token, accountType };
++        return {
++          appId,
++          token: oauth.activeAccount!.token,
++          accountId: oauth.activeAccount!.loginid,
++          accountType,
++        };
+       });
+     } else {
+       // No OAuth session — connect with no token (market data / ticks only)
+       setSettings((prev) => {
+-        if (prev.appId === appId && prev.token === "") return prev;
+-        return { appId, token: "", accountType: "demo" };
++        if (prev.appId === appId && prev.token === "" && prev.accountId === "") return prev;
++        return { appId, token: "", accountId: "", accountType: "demo" };
+       });
+     }
+   }, [oauth.activeAccount, oauth.loading]);
+-- 
+2.53.0
+
