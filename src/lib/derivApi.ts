@@ -3,19 +3,24 @@
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * DROP-IN POINT FOR LIVE CREDENTIALS
- * Replace `DERIV_APP_ID` (or pass appId at connect time) and flip
- * `USE_MOCK` to false once you're ready to hit the live endpoint.
- * Live endpoint: wss://ws.derivws.com/websockets/v3?app_id=<APP_ID>
+ * Browser-side live Deriv connections now use the OTP endpoint for
+ * authenticated sessions, and the public WebSocket endpoint for unauthenticated
+ * market data.
  *
- * Execution flow (live):
- *   1. authorize  → exchange token for session
- *   2. proposal   → request contract quote
- *   3. buy        → execute with proposal id + price
- *   4. proposal_open_contract → stream real-time P&L
+ * Authenticated flow:
+ *   1. POST /trading/v1/options/accounts/{accountId}/otp
+ *      with Deriv-App-ID and Authorization: Bearer token
+ *   2. connect to the returned wss URL (contains one-time OTP)
+ *   3. subscribe to ticks, balance, proposal_open_contract, etc.
+ *
+ * Public flow:
+ *   1. connect to wss://api.derivws.com/trading/v1/options/ws/public
+ *   2. subscribe to ticks and candle history without app_id or auth
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export const DERIV_WS_ENDPOINT = "wss://ws.derivws.com/websockets/v3";
+export const DERIV_PUBLIC_WS_ENDPOINT = "wss://api.derivws.com/trading/v1/options/ws/public";
+export const DERIV_OTP_ACCOUNTS_ENDPOINT = "https://api.derivws.com/trading/v1/options/accounts";
 
 /**
  * Deriv App ID — read from VITE_DERIV_APP_ID environment variable.
@@ -157,9 +162,47 @@ export interface OpenContractUpdate {
 }
 
 export interface ConnectOptions {
-  appId: string;
+  appId?: string;
+  accountId?: string;
   token?: string;
   accountType: AccountType;
+}
+
+export function validateAccountId(accountId?: string | null): string | null {
+  if (accountId === undefined || accountId === null) return null;
+  const normalized = String(accountId).trim();
+  if (!normalized) {
+    console.error(`Invalid Deriv account ID provided: ${accountId}. accountId must be a non-empty string.`);
+    return null;
+  }
+  return normalized;
+}
+
+export async function fetchDerivOtpUrl(
+  accountId: string,
+  token: string,
+  appId: string,
+): Promise<string> {
+  const endpoint = `${DERIV_OTP_ACCOUNTS_ENDPOINT}/${encodeURIComponent(accountId)}/otp`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Deriv-App-ID": appId,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to fetch Deriv OTP URL (${res.status}): ${body}`);
+  }
+
+  const data = await res.json().catch(() => null);
+  if (!data || typeof data !== "object" || typeof (data as any).data?.url !== "string") {
+    throw new Error("Deriv OTP endpoint returned an invalid response.");
+  }
+
+  return (data as { data: { url: string } }).data.url;
 }
 
 export interface DerivConnection {
@@ -400,30 +443,43 @@ class LiveDerivConnection implements DerivConnection {
     this.connect();
   }
 
-  private connect() {
+  private async connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    const appIdStr = validateAppId(this.opts.appId);
-    if (!appIdStr) {
-      throw new Error("Invalid Deriv app_id passed to LiveDerivConnection");
+    let url: string;
+    if (this.opts.token) {
+      const appIdStr = validateAppId(this.opts.appId);
+      if (!appIdStr) {
+        throw new Error("Invalid Deriv app_id passed to LiveDerivConnection");
+      }
+      const accountId = validateAccountId(this.opts.accountId);
+      if (!accountId) {
+        throw new Error("Deriv authenticated connection requires a valid accountId.");
+      }
+      url = await fetchDerivOtpUrl(accountId, this.opts.token, appIdStr);
+    } else {
+      url = DERIV_PUBLIC_WS_ENDPOINT;
     }
 
-    const url = `${DERIV_WS_ENDPOINT}?app_id=${encodeURIComponent(appIdStr)}&l=EN&brand=deriv`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
       this.openedOnce = true;
       this.reconnectAttempts = 0;
-      if (this.opts.token) {
-        this.send({ authorize: this.opts.token });
-      } else {
+      if (!this.opts.token) {
         this.setStatus("connected");
       }
     };
 
-    this.ws.onmessage = (e) => this.handleMessage(JSON.parse(e.data));
+    this.ws.onmessage = (e) => {
+      try {
+        this.handleMessage(JSON.parse(e.data));
+      } catch (err) {
+        console.error("Deriv WS parse error:", err, "event:", e.data);
+      }
+    };
     this.ws.onerror = () => {
       this.setStatus("error");
     };
@@ -487,6 +543,14 @@ class LiveDerivConnection implements DerivConnection {
     this.statusCbs.forEach((cb) => cb(s));
   }
 
+  private async sendAuthorizeIfNeeded() {
+    if (!this.opts.token) return;
+    if (!this.opts.accountId) return;
+    // OTP-based authenticated sessions are already initialized by the
+    // WebSocket URL returned from the OTP endpoint. No extra authorize call
+    // is required for this flow.
+  }
+
   private handleMessage(msg: Record<string, unknown>) {
     const reqId = msg.req_id as number | undefined;
     if (reqId !== undefined && this.pendingRequests.has(reqId)) {
@@ -496,36 +560,56 @@ class LiveDerivConnection implements DerivConnection {
       else resolve(msg);
       return;
     }
-    const msgType = msg.msg_type as string;
+
+    const msgType = msg.msg_type as string | undefined;
     if (msgType === "authorize") {
-      const auth = msg.authorize as Record<string, unknown>;
+      if (msg.error) {
+        console.error("Deriv Auth Error:", (msg.error as { message?: string }).message);
+        return;
+      }
+      const auth = msg.authorize as Record<string, unknown> | undefined;
+      const loginId = auth?.loginid as string | undefined;
+      const balance = auth?.balance as number | undefined;
       this.setStatus("connected");
       this.account = {
-        loginid: auth.loginid as string,
+        loginid: loginId ?? "",
         accountType: this.opts.accountType,
-        currency: (auth.currency as string) ?? "USD",
-        balance: auth.balance as number,
-        equity: auth.balance as number,
+        currency: (auth?.currency as string) ?? "USD",
+        balance: balance ?? 0,
+        equity: balance ?? 0,
         leverage: 100,
       };
       this.accountCbs.forEach((cb) => cb(this.account!));
     }
+
     if (msgType === "tick") {
-      const tick = msg.tick as Record<string, unknown>;
-      const t: Tick = { symbol: tick.symbol as string, time: tick.epoch as number, quote: tick.quote as number };
-      this.tickCbs.get(t.symbol)?.forEach((cb) => cb(t));
+      const tick = msg.tick as Record<string, unknown> | undefined;
+      const symbol = tick?.symbol as string | undefined;
+      const quote = tick?.quote as number | undefined;
+      const time = tick?.epoch as number | undefined;
+      if (symbol && typeof quote === "number" && typeof time === "number") {
+        const t: Tick = { symbol, time, quote };
+        this.tickCbs.get(t.symbol)?.forEach((cb) => cb(t));
+      }
     }
+
     if (msgType === "proposal_open_contract") {
-      const poc = msg.proposal_open_contract as Record<string, unknown>;
-      const id = String(poc.contract_id);
-      const update: OpenContractUpdate = {
-        contractId: id,
-        currentSpot: poc.current_spot as number,
-        entrySpot: poc.entry_spot as number,
-        profit: poc.profit as number,
-        status: poc.status as OpenContractUpdate["status"],
-      };
-      this.contractCbs.get(id)?.forEach((cb) => cb(update));
+      const poc = msg.proposal_open_contract as Record<string, unknown> | undefined;
+      if (poc) {
+        const id = String(poc.contract_id);
+        const update: OpenContractUpdate = {
+          contractId: id,
+          currentSpot: poc.current_spot as number,
+          entrySpot: poc.entry_spot as number,
+          profit: poc.profit as number,
+          status: poc.status as OpenContractUpdate["status"],
+        };
+        this.contractCbs.get(id)?.forEach((cb) => cb(update));
+      }
+    }
+
+    if (msg.error) {
+      console.warn("Deriv WS Warning/Error:", msg.error);
     }
   }
 
@@ -696,13 +780,22 @@ class LiveDerivConnection implements DerivConnection {
 export function connectWebSocket(opts: ConnectOptions): DerivConnection {
   if (USE_MOCK) return new MockDerivConnection(opts);
 
+  if (opts.token) {
+    const appId = validateAppId(opts.appId);
+    const accountId = validateAccountId(opts.accountId);
+    if (!appId || !accountId) {
+      console.error("connectWebSocket: invalid or missing Deriv app_id/accountId — using mock connection.");
+      return new MockDerivConnection(opts);
+    }
+    return new LiveDerivConnection({ ...opts, appId, accountId });
+  }
+
   const appId = validateAppId(opts.appId);
   if (!appId) {
-    // Prevent attempting a WebSocket connection with an invalid app id.
-    // Fall back to mock and surface a clear error for developers.
     console.error("connectWebSocket: invalid or missing numeric Deriv app_id — using mock connection.");
     return new MockDerivConnection(opts);
   }
+
   return new LiveDerivConnection({ ...opts, appId });
 }
 
