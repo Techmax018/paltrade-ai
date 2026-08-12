@@ -13,10 +13,10 @@
 import WebSocket from "ws";
 import { query } from "../db/client";
 import { decrypt } from "../lib/auth";
-import { browserHeaders, WAF_CLIENT_HINT } from "../lib/requestController";
+import { browserHeaders, controlledJson, WAF_CLIENT_HINT } from "../lib/requestController";
 import { NormalisedFrame, AccountUpdate } from "./types";
 
-const DERIV_WS = "wss://ws.derivws.com/websockets/v3";
+const DERIV_OTP_ACCOUNTS_ENDPOINT = "https://api.derivws.com/trading/v1/options/accounts";
 const DERIV_APP_ID = normalizeDerivAppId(process.env.VITE_DERIV_APP_ID ?? "1089");
 
 function normalizeDerivAppId(appId: string): string {
@@ -25,6 +25,23 @@ function normalizeDerivAppId(appId: string): string {
     throw new Error("Missing or invalid Deriv app_id. Set VITE_DERIV_APP_ID to a non-empty string.");
   }
   return normalized;
+}
+
+async function fetchDerivOtpUrl(accountId: string, derivToken: string): Promise<string> {
+  const endpoint = `${DERIV_OTP_ACCOUNTS_ENDPOINT}/${encodeURIComponent(accountId)}/otp`;
+  const response = await controlledJson<{ data: { url: string } }>(endpoint, {
+    method: "POST",
+    headers: {
+      "Deriv-App-ID": DERIV_APP_ID,
+      Authorization: `Bearer ${derivToken}`,
+    },
+  });
+
+  if (!response?.data?.url || typeof response.data.url !== "string") {
+    throw new Error("Deriv OTP endpoint returned an invalid response.");
+  }
+
+  return response.data.url;
 }
 
 function sendToClient(clientWs: WebSocket, frame: NormalisedFrame) {
@@ -64,18 +81,19 @@ export async function startDerivStream(
     throw new Error("Failed to decrypt Deriv token. Re-connect your account.");
   }
 
-  /* ── 2. Open Deriv WebSocket with an authentic browser signature ─────── */
-  const derivWs = new WebSocket(
-    `${DERIV_WS}?app_id=${encodeURIComponent(DERIV_APP_ID)}&l=EN&brand=deriv`,
-    {
-      headers: {
-        ...browserHeaders({ "Sec-Fetch-Site": "cross-site" }),
-        Origin: "https://app.deriv.com",
-      },
-      handshakeTimeout: 20_000,
+  /* ── 2. Fetch a Deriv OTP WebSocket URL and open the socket ────────── */
+  const derivWsUrl = await fetchDerivOtpUrl(rows[0].broker_account_id, derivToken);
+  const derivWs = new WebSocket(derivWsUrl, {
+    headers: {
+      ...browserHeaders({ "Sec-Fetch-Site": "cross-site" }),
+      Origin: "https://app.deriv.com",
     },
-  );
+    handshakeTimeout: 20_000,
+  });
   let reqId = 1;
+  let hasSentConnectedEvent = false;
+  let currentBalance = 0;
+  let currentCurrency = "USD";
 
   function sendDeriv(payload: Record<string, unknown>) {
     if (derivWs.readyState === WebSocket.OPEN) {
@@ -83,12 +101,24 @@ export async function startDerivStream(
     }
   }
 
-  let currentBalance = 0;
-  let currentCurrency = "USD";
+  function sendConnectedEvent(loginId?: string, currency?: string) {
+    if (hasSentConnectedEvent) return;
+    hasSentConnectedEvent = true;
+    sendToClient(clientWs, {
+      type: "connected",
+      broker: "DERIV",
+      timestamp: Date.now(),
+      payload: {
+        loginId:     loginId ?? rows[0].broker_account_id,
+        currency:    currency ?? currentCurrency,
+        accountType: rows[0].account_type,
+      },
+    });
+  }
 
   derivWs.on("open", () => {
-    // Step 1: Authorise with stored token
-    sendDeriv({ authorize: derivToken });
+    sendDeriv({ balance: 1, subscribe: 1 });
+    sendDeriv({ proposal_open_contract: 1, subscribe: 1 });
   });
 
   derivWs.on("message", (raw) => {
@@ -103,26 +133,16 @@ export async function startDerivStream(
       currentCurrency = (auth.currency as string) ?? "USD";
       currentBalance  = (auth.balance as number) ?? 0;
 
-      sendToClient(clientWs, {
-        type: "connected",
-        broker: "DERIV",
-        timestamp: Date.now(),
-        payload: {
-          loginId:     auth.loginid,
-          currency:    currentCurrency,
-          accountType: rows[0].account_type,
-        },
-      });
-
-      // Step 2: Subscribe to real-time balance updates
+      sendConnectedEvent(auth.loginid as string, currentCurrency);
       sendDeriv({ balance: 1, subscribe: 1 });
-      // Step 3: Subscribe to open contracts for P&L
       sendDeriv({ proposal_open_contract: 1, subscribe: 1 });
     }
 
     if (msgType === "balance") {
       const b = msg.balance as Record<string, unknown>;
+      currentCurrency = (b.currency as string) ?? currentCurrency;
       currentBalance = b.balance as number;
+      sendConnectedEvent(b.loginid as string, currentCurrency);
 
       // Deriv balance API doesn't expose equity/margin directly —
       // synthesise a normalised frame with available data
