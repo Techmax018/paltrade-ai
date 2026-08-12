@@ -132,13 +132,14 @@ export function GlobalEntryScanner() {
           size="icon"
           aria-label="Open entry scanner"
           title="Entry scanner"
-          className="fixed bottom-6 right-6 z-[9999] flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 via-pink-600 to-fuchsia-600 text-white shadow-[0_0_18px_rgba(236,72,153,0.24)] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/80"
+          className="fixed bottom-6 right-6 z-[9999] h-12 w-12 rounded-full p-0.5 bg-gradient-to-tr from-rose-500 via-pink-500 to-fuchsia-500 shadow-[0_0_12px_rgba(236,72,153,0.35)] transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
         >
-          <div className="absolute inset-0 rounded-full bg-pink-500/20 blur-2xl" />
-          <div className="relative flex h-full w-full items-center justify-center">
-            <div className="h-14 w-14 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/15 shadow-[0_0_0_4px_rgba(255,255,255,0.08)]">
-              <img src={palAiLogo} alt="PalTrade AI" className="h-full w-full object-cover" />
-            </div>
+          <div className="h-full w-full overflow-hidden rounded-full bg-slate-950">
+            <img
+              src={palAiLogo}
+              alt="PalTrade AI"
+              className="h-full w-full object-cover rounded-full"
+            />
           </div>
         </Button>
       </DialogTrigger>
