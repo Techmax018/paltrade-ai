@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Bot, Brain, ChartCandlestick, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
+import { Brain, ChartCandlestick, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { analyzeMarket, type Analysis } from "@/lib/analysis";
-import { generateCandles, SYMBOLS, type Candle, type Timeframe } from "@/lib/derivApi";
+import { DERIV_APP_ID, generateCandles, SYMBOLS, type Candle, type Timeframe } from "@/lib/derivApi";
+import { useDerivWebSocket } from "@/hooks/useDerivWebSocket";
 import type { StrategyAdvice } from "@/components/terminal/AIStrategyAdvisor";
 
 const SYNTHETICS = SYMBOLS.filter((symbol) => symbol.kind === "synthetic");
@@ -29,24 +30,44 @@ export function SyntheticMarketScanner() {
   const [advice, setAdvice] = useState<StrategyAdvice | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
-  const [open, setOpen] = useState(false);
+  const { status: liveStatus, connection: liveConnection } = useDerivWebSocket({
+    appId: DERIV_APP_ID,
+    accountType: "demo",
+  });
+  const liveAvailable = liveConnection !== null && liveStatus === "connected";
   const symbol = useMemo(
     () => SYNTHETICS.find((item) => item.code === symbolCode) ?? SYNTHETICS[0],
     [symbolCode],
   );
 
-  function loadMarket() {
+  async function loadMarket() {
     if (!symbol) return;
     setLoadingMarket(true);
     setAdvice(null);
-    window.setTimeout(() => {
+
+    try {
+      let next: Candle[];
+      if (liveAvailable && liveConnection) {
+        next = await liveConnection.getCandles(symbol.code, timeframe, 300);
+      } else {
+        next = generateCandles(symbol.code, timeframe, 300);
+      }
+
+      const latest = next.at(-1)?.close ?? symbol.basePrice;
+      setCandles(next);
+      setAnalysis(analyzeMarket(next, latest));
+      toast.success(`${symbol.label} market loaded ${liveAvailable ? "from Deriv" : "(simulated)"}`);
+    } catch (error) {
       const next = generateCandles(symbol.code, timeframe, 300);
       const latest = next.at(-1)?.close ?? symbol.basePrice;
       setCandles(next);
       setAnalysis(analyzeMarket(next, latest));
+      toast.warning(`Loaded synthetic market data from fallback candles. ${
+        error instanceof Error ? error.message : "Deriv candles unavailable"
+      }`);
+    } finally {
       setLoadingMarket(false);
-      toast.success(`${symbol.label} market loaded`);
-    }, 350);
+    }
   }
 
   async function scanWithAi() {
@@ -54,7 +75,15 @@ export function SyntheticMarketScanner() {
     let sourceCandles = candles;
     let sourceAnalysis = analysis;
     if (!sourceCandles.length || !sourceAnalysis) {
-      sourceCandles = generateCandles(symbol.code, timeframe, 300);
+      if (liveAvailable && liveConnection) {
+        try {
+          sourceCandles = await liveConnection.getCandles(symbol.code, timeframe, 300);
+        } catch {
+          sourceCandles = generateCandles(symbol.code, timeframe, 300);
+        }
+      } else {
+        sourceCandles = generateCandles(symbol.code, timeframe, 300);
+      }
       sourceAnalysis = analyzeMarket(sourceCandles, sourceCandles.at(-1)?.close ?? symbol.basePrice);
       setCandles(sourceCandles);
       setAnalysis(sourceAnalysis);
@@ -177,32 +206,6 @@ export function SyntheticMarketScanner() {
         </div>
       </section>
 
-      <Button
-        type="button"
-        size="icon"
-        aria-label={open ? "Close Pal AI scanner" : "Open Pal AI scanner"}
-        title="Pal AI market scanner"
-        onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full shadow-card"
-      >
-        {open ? <X className="h-5 w-5" /> : <Bot className="h-6 w-6" />}
-      </Button>
-
-      {open && (
-        <aside className="fixed bottom-24 right-4 z-40 w-[calc(100vw-2rem)] max-w-sm rounded-lg border border-signal/30 bg-card p-4 shadow-card" aria-label="Pal AI quick scanner">
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-signal" />
-            <div>
-              <p className="text-sm font-bold">Pal AI</p>
-              <p className="text-xs text-muted-foreground">Scan {symbol?.label ?? "synthetics"} on {timeframe}</p>
-            </div>
-          </div>
-          <Button type="button" className="mt-4 w-full" onClick={() => { setOpen(false); void scanWithAi(); }} disabled={loadingAi}>
-            {loadingAi ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            Scan and load market
-          </Button>
-        </aside>
-      )}
     </>
   );
 }
