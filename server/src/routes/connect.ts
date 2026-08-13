@@ -193,6 +193,41 @@ router.post("/deriv-callback", async (req: Request, res: Response) => {
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   POST /api/v1/connect/gemini
+
+   Receives { apiKey, apiSecret, accountName? }
+   Encrypts credentials and stores them in linked_brokers as broker_type 'GEMINI'.
+   Returns linkedBrokerId.
+   ═══════════════════════════════════════════════════════════════════════════ */
+router.post("/gemini", async (req: Request, res: Response) => {
+  const userId = res.locals.user.sub as string;
+  const { apiKey, apiSecret, accountName } = req.body as { apiKey?: string; apiSecret?: string; accountName?: string };
+
+  if (!apiKey || !apiSecret) {
+    res.status(422).json({ ok: false, error: "apiKey and apiSecret are required." });
+    return;
+  }
+
+  const encrypted = encrypt(JSON.stringify({ apiKey, apiSecret }));
+  const accountId = accountName ?? apiKey;
+
+  const row = await queryOne<{ id: string }>(
+    `INSERT INTO linked_brokers
+       (user_id, broker_type, broker_account_id, account_type, oauth_access_token, is_active)
+     VALUES ($1, 'GEMINI', $2, 'REAL', $3, TRUE)
+     ON CONFLICT (user_id, broker_type, broker_account_id)
+       DO UPDATE SET
+         oauth_access_token = EXCLUDED.oauth_access_token,
+         is_active          = TRUE,
+         updated_at         = NOW()
+     RETURNING id`,
+    [userId, accountId, encrypted],
+  );
+
+  res.status(201).json({ ok: true, linkedBrokerId: row!.id, message: "Gemini API credentials stored." });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
    GET /api/v1/connect/brokers
    Returns all linked broker accounts for the authenticated user.
    ═══════════════════════════════════════════════════════════════════════════ */

@@ -19,6 +19,7 @@ import authRouter     from "./routes/auth";
 import connectRouter  from "./routes/connect";
 import tradeLogRouter from "./routes/tradeLogs";
 import serversRouter  from "./routes/servers";
+import aiTradeRouter  from "./routes/aiTrade";
 import { verifyToken } from "./lib/auth";
 import { startVantageStream } from "./ws/vantageStream";
 import { startDerivStream }   from "./ws/derivStream";
@@ -63,6 +64,7 @@ app.use("/api/v1/auth",          authRouter);
 app.use("/api/v1/connect",       connectRouter);
 app.use("/api/v1/trade-log",     tradeLogRouter);
 app.use("/api/v1/broker",        serversRouter);
+app.use("/api/v1/ai-trade",      aiTradeRouter);
 
 app.use((_req, res) => res.status(404).json({ ok: false, error: "Not found." }));
 
