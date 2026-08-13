@@ -181,7 +181,7 @@ export function GlobalEntryScanner() {
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
-            className="col-span-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-xl shadow-cyan-500/20 hover:brightness-110"
+            className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-xl shadow-cyan-500/20 hover:brightness-110"
             onClick={scanForBestMarket}
             disabled={loadingAi}
           >
@@ -198,11 +198,7 @@ export function GlobalEntryScanner() {
           </Button>
         </div>
 
-        <DialogFooter className="mt-6 justify-end">
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Close
-          </Button>
-        </DialogFooter>
+        <DialogFooter className="mt-6 justify-end" />
       </DialogContent>
     </Dialog>
   );
