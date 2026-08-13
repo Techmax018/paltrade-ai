@@ -127,18 +127,32 @@ export const Route = createFileRoute("/api/ai/strategy")({
         }
 
         // Otherwise, call Google Generative API (Gemini) directly
-        const googleModel = process.env.GOOGLE_MODEL;
+        let googleModel = process.env.GOOGLE_MODEL;
         const googleToken = process.env.GOOGLE_OAUTH_TOKEN ?? process.env.GOOGLE_API_KEY;
         if (!googleToken)
           return new Response(
             "Missing AI configuration (set LOVABLE_API_KEY or GOOGLE_API_KEY/GOOGLE_OAUTH_TOKEN)",
             { status: 500 },
           );
-        if (!googleModel)
-          return new Response(
-            "Missing GOOGLE_MODEL environment variable — set to the model resource name (e.g. 'models/gemini-1' or 'models/text-bison-001')",
-            { status: 500 },
-          );
+
+        // Prepare headers for Google calls
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (process.env.GOOGLE_OAUTH_TOKEN) headers.Authorization = `Bearer ${process.env.GOOGLE_OAUTH_TOKEN}`;
+        else headers["X-goog-api-key"] = process.env.GOOGLE_API_KEY as string;
+
+        // If GOOGLE_MODEL not configured, attempt to auto-detect a sensible default
+        if (!googleModel) {
+          const listRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+            method: "GET",
+            headers,
+          });
+          if (!listRes.ok) return new Response(await listRes.text() || "Failed to list Google models", { status: listRes.status });
+          const listBody = await listRes.json();
+          const available: string[] = (listBody.models ?? []).map((m: any) => m.name).filter(Boolean);
+          const candidate = available.find((n) => /gemini/i.test(n)) ?? available.find((n) => /bison|text/i.test(n));
+          if (!candidate) return new Response("No suitable Google model found in account", { status: 500 });
+          googleModel = candidate;
+        }
 
         const prompt = `You are PalTrade AI, a disciplined forex & synthetic-index strategy analyst.\nReturn a JSON object matching the following schema exactly (no extra text): ${JSON.stringify(
           SCHEMA.schema,
