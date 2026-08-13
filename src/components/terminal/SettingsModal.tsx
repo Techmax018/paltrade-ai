@@ -116,9 +116,6 @@ export function SettingsModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
           <Button
             type="button"
             onClick={() => onSave({ appId, token, accountId, accountType })}
