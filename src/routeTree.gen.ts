@@ -18,7 +18,9 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SyntheticsRouteImport } from './routes/synthetics'
 import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiAiModelsRouteImport } from './routes/api/ai/models'
 import { Route as ApiAiStrategyRouteImport } from './routes/api/ai/strategy'
+import { Route as ApiAiStreamRouteImport } from './routes/api/ai/stream'
 import { Route as ApiDerivTokenRouteImport } from './routes/api/deriv/token'
 import { Route as AuthDerivCallbackRouteImport } from './routes/auth/deriv/callback'
 import { Route as ApiAuthDerivCallbackRouteImport } from './routes/api/auth/deriv/callback'
@@ -72,9 +74,19 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiModelsRoute = ApiAiModelsRouteImport.update({
+  id: '/api/ai/models',
+  path: '/api/ai/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiStrategyRoute = ApiAiStrategyRouteImport.update({
   id: '/api/ai/strategy',
   path: '/api/ai/strategy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiStreamRoute = ApiAiStreamRouteImport.update({
+  id: '/api/ai/stream',
+  path: '/api/ai/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDerivTokenRoute = ApiDerivTokenRouteImport.update({
@@ -123,7 +135,9 @@ export interface FileRoutesByFullPath {
   '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/models': typeof ApiAiModelsRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
+  '/api/ai/stream': typeof ApiAiStreamRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/auth/deriv/callback': typeof ApiAuthDerivCallbackRoute
@@ -142,7 +156,9 @@ export interface FileRoutesByTo {
   '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/models': typeof ApiAiModelsRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
+  '/api/ai/stream': typeof ApiAiStreamRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/auth/deriv/callback': typeof ApiAuthDerivCallbackRoute
@@ -162,7 +178,9 @@ export interface FileRoutesById {
   '/synthetics': typeof SyntheticsRoute
   '/terminal': typeof TerminalRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ai/models': typeof ApiAiModelsRoute
   '/api/ai/strategy': typeof ApiAiStrategyRoute
+  '/api/ai/stream': typeof ApiAiStreamRoute
   '/api/deriv/token': typeof ApiDerivTokenRoute
   '/auth/deriv/callback': typeof AuthDerivCallbackRoute
   '/api/auth/deriv/callback': typeof ApiAuthDerivCallbackRoute
@@ -183,7 +201,9 @@ export interface FileRouteTypes {
     | '/synthetics'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/models'
     | '/api/ai/strategy'
+    | '/api/ai/stream'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/auth/deriv/callback'
@@ -202,7 +222,9 @@ export interface FileRouteTypes {
     | '/synthetics'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/models'
     | '/api/ai/strategy'
+    | '/api/ai/stream'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/auth/deriv/callback'
@@ -221,7 +243,9 @@ export interface FileRouteTypes {
     | '/synthetics'
     | '/terminal'
     | '/api/chat'
+    | '/api/ai/models'
     | '/api/ai/strategy'
+    | '/api/ai/stream'
     | '/api/deriv/token'
     | '/auth/deriv/callback'
     | '/api/auth/deriv/callback'
@@ -241,7 +265,9 @@ export interface RootRouteChildren {
   SyntheticsRoute: typeof SyntheticsRoute
   TerminalRoute: typeof TerminalRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiAiModelsRoute: typeof ApiAiModelsRoute
   ApiAiStrategyRoute: typeof ApiAiStrategyRoute
+  ApiAiStreamRoute: typeof ApiAiStreamRoute
   ApiDerivTokenRoute: typeof ApiDerivTokenRoute
   AuthDerivCallbackRoute: typeof AuthDerivCallbackRoute
   ApiAuthDerivCallbackRoute: typeof ApiAuthDerivCallbackRoute
@@ -316,11 +342,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/models': {
+      id: '/api/ai/models'
+      path: '/api/ai/models'
+      fullPath: '/api/ai/models'
+      preLoaderRoute: typeof ApiAiModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/strategy': {
       id: '/api/ai/strategy'
       path: '/api/ai/strategy'
       fullPath: '/api/ai/strategy'
       preLoaderRoute: typeof ApiAiStrategyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/stream': {
+      id: '/api/ai/stream'
+      path: '/api/ai/stream'
+      fullPath: '/api/ai/stream'
+      preLoaderRoute: typeof ApiAiStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/deriv/token': {
@@ -385,7 +425,9 @@ const rootRouteChildren: RootRouteChildren = {
   SyntheticsRoute: SyntheticsRoute,
   TerminalRoute: TerminalRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiAiModelsRoute: ApiAiModelsRoute,
   ApiAiStrategyRoute: ApiAiStrategyRoute,
+  ApiAiStreamRoute: ApiAiStreamRoute,
   ApiDerivTokenRoute: ApiDerivTokenRoute,
   AuthDerivCallbackRoute: AuthDerivCallbackRoute,
   ApiAuthDerivCallbackRoute: ApiAuthDerivCallbackRoute,

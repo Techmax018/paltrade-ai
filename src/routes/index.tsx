@@ -18,6 +18,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { DERIV_PUBLIC_WS_ENDPOINT } from "@/lib/derivApi";
 import { getOrigin } from "../lib/og";
 
 export const Route = createFileRoute("/")({
@@ -47,18 +48,26 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-/* ── Static market ticker data ─────────────────────────────────────── */
+/* ── Live market ticker data ───────────────────────────────────────────── */
 type Pair = { symbol: string; price: string; change: number };
-const PAIRS: Pair[] = [
-  { symbol: "XAU/USD",  price: "2358.10", change:  0.62 },
-  { symbol: "EUR/USD",  price: "1.0872",  change:  0.24 },
-  { symbol: "GBP/USD",  price: "1.2691",  change: -0.13 },
-  { symbol: "USD/JPY",  price: "156.42",  change:  0.41 },
-  { symbol: "VOL 100",  price: "1420.55", change:  1.14 },
-  { symbol: "VOL 75",   price: "98450.2", change: -0.87 },
-  { symbol: "BOOM1000", price: "9120.70", change:  0.33 },
-  { symbol: "AUD/USD",  price: "0.6584",  change: -0.22 },
-];
+
+const TICKER_SYMBOLS = [
+  { code: "frxXAUUSD", label: "XAU/USD" },
+  { code: "frxEURUSD", label: "EUR/USD" },
+  { code: "frxGBPUSD", label: "GBP/USD" },
+  { code: "frxUSDJPY", label: "USD/JPY" },
+  { code: "R_100", label: "VOL 100" },
+  { code: "R_75", label: "VOL 75" },
+  { code: "BOOM1000", label: "BOOM1000" },
+  { code: "frxAUDUSD", label: "AUD/USD" },
+] as const;
+
+function formatTickerPrice(code: string, value: number) {
+  if (code === "frxXAUUSD") return value.toFixed(2);
+  if (code === "frxEURUSD" || code === "frxGBPUSD" || code === "frxAUDUSD") return value.toFixed(4);
+  if (code === "frxUSDJPY") return value.toFixed(2);
+  return value.toFixed(2);
+}
 
 /* ── Feature cards ─────────────────────────────────────────────────── */
 const FEATURES = [
@@ -228,14 +237,78 @@ function Nav() {
 
 /* ── Scrolling ticker ─────────────────────────────────────────────── */
 function Ticker() {
-  const items = [...PAIRS, ...PAIRS];
+  const [quotes, setQuotes] = useState<Record<string, { price: number; change: number }>>(() => {
+    const initial: Record<string, { price: number; change: number }> = {};
+    for (const item of TICKER_SYMBOLS) {
+      const base = {
+        frxXAUUSD: 2358.1,
+        frxEURUSD: 1.0872,
+        frxGBPUSD: 1.2691,
+        frxUSDJPY: 156.42,
+        R_100: 1420.55,
+        R_75: 98450.2,
+        BOOM1000: 9120.7,
+        frxAUDUSD: 0.6584,
+      }[item.code] ?? 1;
+      initial[item.code] = { price: base, change: 0 };
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const socket = new WebSocket(DERIV_PUBLIC_WS_ENDPOINT);
+    const symbols = TICKER_SYMBOLS.map((s) => s.code);
+
+    socket.onopen = () => {
+      symbols.forEach((symbol) => {
+        socket.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+      });
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        const tick = msg?.tick;
+        const symbol = tick?.symbol as string | undefined;
+        const quote = Number(tick?.quote);
+        if (!symbol || !Number.isFinite(quote)) return;
+
+        setQuotes((prev) => {
+          const previous = prev[symbol]?.price ?? quote;
+          const change = previous ? ((quote - previous) / previous) * 100 : 0;
+          return {
+            ...prev,
+            [symbol]: { price: quote, change },
+          };
+        });
+      } catch {
+        // ignore malformed websocket payloads
+      }
+    };
+
+    return () => socket.close();
+  }, []);
+
+  const items: Pair[] = TICKER_SYMBOLS.map((item) => {
+    const live = quotes[item.code] ?? { price: 0, change: 0 };
+    return {
+      symbol: item.label,
+      price: formatTickerPrice(item.code, live.price),
+      change: live.change,
+    };
+  });
+
+  const tickerItems = [...items, ...items];
+
   return (
     <div className="overflow-hidden border-b border-border/60 bg-card/40 py-2.5">
       <div className="flex w-max animate-ticker gap-8 whitespace-nowrap font-mono text-xs">
-        {items.map((p, i) => (
-          <span key={i} className="flex items-center gap-1.5">
+        {tickerItems.map((p, i) => (
+          <span key={`${p.symbol}-${i}`} className="flex items-center gap-1.5">
             <span className="text-muted-foreground">{p.symbol}</span>
-            <span className="text-foreground font-semibold">{p.price}</span>
+            <span className="font-semibold text-foreground">{p.price}</span>
             <span className={p.change >= 0 ? "text-bull" : "text-bear"}>
               {p.change >= 0 ? "▲" : "▼"} {Math.abs(p.change).toFixed(2)}%
             </span>

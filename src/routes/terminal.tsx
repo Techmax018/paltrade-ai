@@ -444,6 +444,7 @@ function TerminalPage() {
         status={status}
         account={account}
         autoPilot={autoPilot}
+        timeframe={timeframe}
         onOpenSettings={() => setSettingsOpen(true)}
         onToggleAutoPilot={handleToggleAutoPilot}
         onOpenAutoPilotConfig={() => setAutoPilotConfigOpen(true)}

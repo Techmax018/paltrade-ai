@@ -1,14 +1,19 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Bot,
   RefreshCw,
   Settings,
   Settings2,
+  TrendingDown,
+  TrendingUp,
   Wifi,
   WifiOff,
 } from "lucide-react";
-import type { AccountInfo, ConnectionStatus } from "@/lib/derivApi";
+import type { AccountInfo, ConnectionStatus, Timeframe } from "@/lib/derivApi";
+
+const TIMEFRAME_SECONDS: Record<Timeframe, number> = { M1: 60, M5: 300, M15: 900, H1: 3600 };
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
   connected: "Connected",
@@ -22,6 +27,7 @@ export function TerminalHeader({
   status,
   account,
   autoPilot,
+  timeframe,
   onOpenSettings,
   onToggleAutoPilot,
   onOpenAutoPilotConfig,
@@ -29,6 +35,7 @@ export function TerminalHeader({
   status: ConnectionStatus;
   account: AccountInfo | null;
   autoPilot: boolean;
+  timeframe: Timeframe;
   onOpenSettings: () => void;
   onToggleAutoPilot: (v: boolean) => void;
   onOpenAutoPilotConfig: () => void;
@@ -42,12 +49,38 @@ export function TerminalHeader({
     : status === "disconnected" || status === "error" ? WifiOff
     : RefreshCw;
 
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const secondsPerCandle = TIMEFRAME_SECONDS[timeframe];
+  const nextCandleRemaining = useMemo(() => {
+    const nowSeconds = Math.floor(now / 1000);
+    const nextBoundary = Math.ceil(nowSeconds / secondsPerCandle) * secondsPerCandle;
+    const diff = Math.max(0, nextBoundary - nowSeconds);
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+    return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }, [now, secondsPerCandle]);
+
+  const monthRemaining = useMemo(() => {
+    const end = new Date();
+    end.setMonth(end.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    const diffMs = Math.max(0, end.getTime() - now);
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m`;
+  }, [now]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-card/50 backdrop-blur-xl">
-      {/* ── Row 1: logo · connection · auto-pilot · actions ── */}
       <div className="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 no-scrollbar">
-
-        {/* Logo */}
         <Link to="/" className="flex shrink-0 items-center gap-1.5">
           <img
             src="/android-chrome-192x192.png"
@@ -62,57 +95,70 @@ export function TerminalHeader({
           </span>
         </Link>
 
-        {/* Connection */}
         <div className={`flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/50 px-2 py-1 text-[11px] sm:px-3 sm:text-xs ${tone}`}>
           <ConnIcon className={`h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 ${status === "connecting" || status === "reconnecting" ? "animate-spin" : ""}`} />
           <span className="hidden xs:inline">{STATUS_LABEL[status]}</span>
         </div>
 
-        {/* Auto-Pilot */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wide transition-all sm:gap-1.5 sm:px-3 sm:text-[11px] ${
+        <button
+          type="button"
+          aria-label={autoPilot ? "Disable Auto-Pilot" : "Enable Auto-Pilot"}
+          onClick={() => onToggleAutoPilot(!autoPilot)}
+          className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors sm:text-[11px] ${
             autoPilot
-              ? "animate-autopilot-pulse border-profit/50 bg-profit/10 text-profit"
-              : "border-border bg-background/50 text-muted-foreground"
-          }`}>
-            <Bot className={`h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 ${autoPilot ? "animate-pulse" : ""}`} />
-            <span className="hidden md:inline">{autoPilot ? "AUTO-TRADING ACTIVE" : "STANDBY"}</span>
-          </span>
-          {/* Toggle */}
-          <button
-            role="switch"
-            aria-checked={autoPilot}
-            aria-label="Toggle Auto-Pilot"
-            onClick={() => onToggleAutoPilot(!autoPilot)}
-            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 transition-colors sm:h-6 sm:w-11 ${
-              autoPilot ? "border-profit bg-profit" : "border-border bg-muted"
-            }`}
-          >
-            <span className={`block h-3 w-3 rounded-full bg-background shadow-sm transition-transform sm:h-4 sm:w-4 ${
-              autoPilot ? "translate-x-4 sm:translate-x-5" : "translate-x-0.5"
-            }`} />
-          </button>
-          {/* Config cog */}
-          <button
-            onClick={onOpenAutoPilotConfig}
-            aria-label="Configure Auto-Pilot"
-            className={`rounded-md border p-1.5 transition-colors ${
-              autoPilot ? "border-signal/40 bg-signal/10 text-signal" : "border-border text-muted-foreground hover:text-signal"
-            }`}
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+              ? "border-signal/40 bg-signal/10 text-signal"
+              : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Bot className={`h-3.5 w-3.5 ${autoPilot ? "animate-pulse" : ""}`} />
+          {autoPilot ? "AI on" : "AI off"}
+        </button>
 
-        {/* Account — right-aligned, hides on small screens */}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {account && (
-            <>
-              <Stat label="Bal" value={`$${account.balance.toFixed(0)}`} className="hidden sm:flex" />
-              <Stat label="Eq" value={`$${account.equity.toFixed(0)}`} accent className="hidden md:flex" />
-            </>
-          )}
+        <button
+          type="button"
+          onClick={onOpenAutoPilotConfig}
+          aria-label="Auto-Pilot settings"
+          className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/50 px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-signal/50 hover:text-signal sm:text-[11px]"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Config</span>
+        </button>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md border border-profit/30 bg-profit/10 px-2 py-1.5 text-[10px] font-semibold text-profit transition hover:bg-profit/15 sm:text-[11px]"
+          >
+            <TrendingUp className="h-3.5 w-3.5" />
+            BUY
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md border border-bear/30 bg-bear/10 px-2 py-1.5 text-[10px] font-semibold text-bear transition hover:bg-bear/15 sm:text-[11px]"
+          >
+            <TrendingDown className="h-3.5 w-3.5" />
+            SELL
+          </button>
+
+          <div className="hidden rounded-md border border-border bg-background/50 px-2 py-1.5 sm:flex">
+            <div className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Next {timeframe}</div>
+            <div className="ml-2 font-mono text-[11px] text-signal">{nextCandleRemaining}</div>
+          </div>
+
+          <div className="hidden rounded-md border border-border bg-background/50 px-2 py-1.5 lg:flex">
+            <div className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Month left</div>
+            <div className="ml-2 font-mono text-[11px] text-foreground">{monthRemaining}</div>
+          </div>
+
+          {account && (
+            <div className="flex items-center gap-1 rounded-md border border-border bg-background/50 px-2 py-1.5">
+              <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Bal</span>
+              <span className="font-mono text-[11px] text-foreground">${account.balance.toFixed(0)}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
             onClick={onOpenSettings}
             className="flex items-center gap-1 rounded-md border border-border bg-background/50 px-2 py-1.5 text-[11px] font-medium hover:border-signal/50 hover:text-signal sm:px-3"
           >
@@ -122,16 +168,19 @@ export function TerminalHeader({
         </div>
       </div>
 
-      {/* ── Sub-bar ── */}
       <div className="flex items-center gap-1 border-t border-border/40 px-4 py-1 text-[10px] text-muted-foreground sm:text-[11px]">
         <Activity className="h-3 w-3 shrink-0 text-signal" />
         <span className="truncate">Deriv WebSocket · Forex & Synthetics</span>
-        {autoPilot && (
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-profit">
-            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-profit" />
-            <span className="hidden sm:inline">Engine scanning…</span>
-          </span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-2 text-[10px]">
+          <span className="font-medium text-muted-foreground">{timeframe}</span>
+          <span className="font-mono text-signal">{nextCandleRemaining}</span>
+          {autoPilot && (
+            <span className="flex items-center gap-1 text-profit">
+              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-profit" />
+              <span className="hidden sm:inline">Engine scanning…</span>
+            </span>
+          )}
+        </span>
       </div>
     </header>
   );

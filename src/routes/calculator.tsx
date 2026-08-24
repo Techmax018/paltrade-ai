@@ -94,25 +94,21 @@ function CalculatorPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex items-start gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/10 text-primary">
             <Calculator className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Lot Size Calculator</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Risk Calculator</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Position size from account balance, risk %, stop-loss in pips, and pip value.
+              Quick position sizing for a clean, disciplined trade plan.
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          {/* Inputs */}
-          <section className="rounded-xl border border-border/60 bg-card p-6">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Inputs
-            </h2>
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
+          <section className="rounded-2xl border border-border/60 bg-card p-5">
             <div className="space-y-4">
               <Field label="Account balance (USD)">
                 <input
@@ -134,36 +130,36 @@ function CalculatorPage() {
                   onChange={(e) => setRiskPct(parseFloat(e.target.value))}
                   className="w-full accent-primary"
                 />
-                <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                  <span>0.1%</span>
-                  <span>1% (recommended)</span>
+                <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+                  <span>0.5%</span>
+                  <span>1%</span>
                   <span>5%</span>
                 </div>
               </Field>
 
-              <Field label="Stop-loss (pips)">
-                <input
-                  type="number"
-                  min={1}
-                  value={stopPips}
-                  onChange={(e) => setStopPips(Math.max(1, parseFloat(e.target.value) || 1))}
-                  className="input"
-                />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Stop-loss (pips)">
+                  <input
+                    type="number"
+                    min={1}
+                    value={stopPips}
+                    onChange={(e) => setStopPips(Math.max(1, parseFloat(e.target.value) || 1))}
+                    className="input"
+                  />
+                </Field>
 
-              <Field label="Pair">
-                <select
-                  value={pair}
-                  onChange={(e) => setPair(e.target.value as keyof typeof PIP_VALUE_PER_LOT)}
-                  className="input"
-                >
-                  {Object.keys(PIP_VALUE_PER_LOT).map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                <Field label="Pair">
+                  <select
+                    value={pair}
+                    onChange={(e) => setPair(e.target.value as keyof typeof PIP_VALUE_PER_LOT)}
+                    className="input"
+                  >
+                    {Object.keys(PIP_VALUE_PER_LOT).map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
 
               <Field label={`Pip value per 1.00 lot (USD) — default $${PIP_VALUE_PER_LOT[pair]}`}>
                 <input
@@ -175,16 +171,12 @@ function CalculatorPage() {
                   onChange={(e) => setPipValueOverride(e.target.value)}
                   className="input"
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Override for exotic pairs or non-USD accounts.
-                </p>
               </Field>
             </div>
           </section>
 
-          {/* Results */}
           <section className="space-y-4">
-            <div className="rounded-xl border border-primary/40 bg-primary/5 p-6">
+            <div className="rounded-2xl border border-primary/40 bg-primary/5 p-5">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <Target className="h-4 w-4" /> Recommended position
               </div>
@@ -192,7 +184,7 @@ function CalculatorPage() {
                 {fmt(results.lots, 2)} <span className="text-lg text-muted-foreground">lots</span>
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                ≈ {fmt(results.units, 0)} units of base currency
+                ≈ {fmt(results.units, 0)} units
               </div>
             </div>
 
@@ -202,29 +194,19 @@ function CalculatorPage() {
               <Stat label="Micro" value={`${fmt(results.micro, 2)}`} sub="× 1k" />
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card p-6">
+            <div className="rounded-2xl border border-border/60 bg-card p-5">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Risk breakdown
+                Risk summary
               </h3>
               <dl className="grid grid-cols-2 gap-3 text-sm">
-                <Row icon={<DollarSign className="h-4 w-4" />} label="Amount at risk">
-                  ${fmt(results.riskAmount)}
-                </Row>
-                <Row icon={<ShieldCheck className="h-4 w-4" />} label="Risk % of balance">
-                  {fmt(riskPct)}%
-                </Row>
+                <Row icon={<DollarSign className="h-4 w-4" />} label="At risk">${fmt(results.riskAmount)}</Row>
+                <Row icon={<ShieldCheck className="h-4 w-4" />} label="Risk %">{fmt(riskPct)}%</Row>
                 <Row label="Stop-loss">{stopPips} pips</Row>
-                <Row label="Pip value / lot">${fmt(pipValuePerLot)}</Row>
-                <Row label="Risk per 1.00 lot">${fmt(results.perLotRisk)}</Row>
+                <Row label="Pip value">${fmt(pipValuePerLot)}</Row>
+                <Row label="Per lot risk">${fmt(results.perLotRisk)}</Row>
                 <Row label="Pair">{pair}</Row>
               </dl>
             </div>
-
-            <p className="text-xs text-muted-foreground">
-              Formula: lots = (balance × risk%) ÷ (stop-loss pips × pip value per lot).
-              Pip values are approximate and assume a USD-denominated account. For JPY-quoted
-              or exotic pairs, override the pip value using your broker's live figure.
-            </p>
           </section>
         </div>
       </main>
@@ -232,15 +214,15 @@ function CalculatorPage() {
       <style>{`
         .input {
           width: 100%;
-          border-radius: 0.5rem;
+          border-radius: 0.625rem;
           border: 1px solid hsl(var(--border));
           background: hsl(var(--background));
-          padding: 0.55rem 0.75rem;
+          padding: 0.65rem 0.75rem;
           font-size: 0.9rem;
           color: hsl(var(--foreground));
           outline: none;
         }
-        .input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15); }
+        .input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.16); }
       `}</style>
     </div>
   );

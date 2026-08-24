@@ -49,6 +49,53 @@ const SCHEMA = {
   },
 } as const;
 
+function buildLocalStrategyAdvice(snapshot: SnapshotBody) {
+  const bias = (snapshot.analysis as Record<string, unknown> | undefined)?.bias as string | undefined;
+  const confluence = Boolean((snapshot.analysis as Record<string, unknown> | undefined)?.confluenceAligned);
+  const score = Number((snapshot.analysis as Record<string, unknown> | undefined)?.autonomousScore ?? 0);
+  const confidenceBase = Number((snapshot.analysis as Record<string, unknown> | undefined)?.confidence ?? 55);
+
+  let direction: "BUY" | "SELL" | "STAND_ASIDE" = "STAND_ASIDE";
+  let timing: "TAKE_NOW" | "WAIT_FOR_TRIGGER" | "AVOID" = "AVOID";
+  let bestStrategy = "Wait for stronger structure";
+
+  if (bias === "BULLISH" || score > 0) {
+    direction = "BUY";
+    bestStrategy = confluence ? "EMA + BOS continuation buy" : "Bullish pullback buy setup";
+    timing = confluence ? "TAKE_NOW" : "WAIT_FOR_TRIGGER";
+  } else if (bias === "BEARISH" || score < 0) {
+    direction = "SELL";
+    bestStrategy = confluence ? "EMA + BOS continuation sell" : "Bearish pullback sell setup";
+    timing = confluence ? "TAKE_NOW" : "WAIT_FOR_TRIGGER";
+  } else {
+    direction = "STAND_ASIDE";
+    bestStrategy = "Range fade or wait for confirmation";
+    timing = "AVOID";
+  }
+
+  const confidence = Math.max(0, Math.min(100, Math.round(confidenceBase || Math.abs(score) * 10 + 50)));
+
+  return {
+    bestStrategy,
+    direction,
+    timing,
+    timingReason: confluence
+      ? "The market structure, trend alignment, and momentum are supporting a clean entry."
+      : "The setup is not fully confirmed; wait for a clean trigger before taking risk.",
+    entryWindow: "Retest of the last valid swing level or fresh breakout confirmation",
+    sessionNote: "Use the current session trend and avoid forcing entries into low-volume chop.",
+    confidence,
+    checklist: [
+      "Trend and structure agree",
+      "Momentum is not opposing the trade",
+      "Entry is near a valid support or resistance area",
+      "Risk stays inside the configured daily drawdown cap",
+    ],
+    invalidation: "Invalid if price breaks the opposite side of the current structure or the signal loses confluence.",
+    riskNote: "Only take the setup with a disciplined stop and fixed risk. If the structure weakens, skip the trade.",
+  };
+}
+
 export const Route = createFileRoute("/api/ai/strategy")({
   server: {
     handlers: {
@@ -129,22 +176,20 @@ export const Route = createFileRoute("/api/ai/strategy")({
         // Otherwise, call Google Generative API (Gemini) directly
         let googleModel = process.env.GOOGLE_MODEL;
         const googleToken = process.env.GOOGLE_OAUTH_TOKEN ?? process.env.GOOGLE_API_KEY;
-        if (!googleToken)
-          return new Response(
-            "Missing AI configuration (set LOVABLE_API_KEY or GOOGLE_API_KEY/GOOGLE_OAUTH_TOKEN)",
-            { status: 500 },
-          );
+        if (!googleToken) {
+          return Response.json(buildLocalStrategyAdvice(snapshot));
+        }
 
         // Prepare headers for Google calls
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (process.env.GOOGLE_OAUTH_TOKEN) headers.Authorization = `Bearer ${process.env.GOOGLE_OAUTH_TOKEN}`;
-        else headers["X-goog-api-key"] = process.env.GOOGLE_API_KEY as string;
+        const googleHeaders: Record<string, string> = { "Content-Type": "application/json" };
+        if (process.env.GOOGLE_OAUTH_TOKEN) googleHeaders.Authorization = `Bearer ${process.env.GOOGLE_OAUTH_TOKEN}`;
+        else googleHeaders["X-goog-api-key"] = process.env.GOOGLE_API_KEY as string;
 
         // If GOOGLE_MODEL not configured, attempt to auto-detect a sensible default
         if (!googleModel) {
           const listRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
             method: "GET",
-            headers,
+            headers: googleHeaders,
           });
           if (!listRes.ok) return new Response(await listRes.text() || "Failed to list Google models", { status: listRes.status });
           const listBody = await listRes.json();
@@ -158,16 +203,12 @@ export const Route = createFileRoute("/api/ai/strategy")({
           SCHEMA.schema,
         )}\nSnapshot: ${JSON.stringify(snapshot)}`;
 
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (process.env.GOOGLE_OAUTH_TOKEN) headers.Authorization = `Bearer ${process.env.GOOGLE_OAUTH_TOKEN}`;
-        else headers["X-goog-api-key"] = process.env.GOOGLE_API_KEY as string;
-
         async function tryGenerate(modelName: string) {
           const r = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
             {
               method: "POST",
-              headers,
+              headers: googleHeaders,
               body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
             },
           );
@@ -184,7 +225,7 @@ export const Route = createFileRoute("/api/ai/strategy")({
           if (gres.status === 404 || /not found|not supported/i.test(bodyText)) {
             const listRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
               method: "GET",
-              headers,
+              headers: googleHeaders,
             });
 
             if (listRes.ok) {
