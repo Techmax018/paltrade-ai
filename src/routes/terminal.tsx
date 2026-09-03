@@ -11,7 +11,6 @@ import { AutoPilotConfigDrawer } from "@/components/terminal/AutoPilotConfig";
 import { AuditLog } from "@/components/terminal/AuditLog";
 import { TradeFeed } from "@/components/terminal/TradeFeed";
 import { BacktestPanel } from "@/components/terminal/BacktestPanel";
-import { AIStrategyAdvisor } from "@/components/terminal/AIStrategyAdvisor";
 
 import {
   useAutonomousEngine,
@@ -31,6 +30,7 @@ import {
   type Timeframe,
 } from "@/lib/derivApi";
 import { useDerivWebSocket } from "@/hooks/useDerivWebSocket";
+import { useBackendTicks } from "@/hooks/useBackendTicks";
 import { analyzeMarket, type Analysis } from "@/lib/analysis";
 import {
   playAutoPilotOff,
@@ -42,9 +42,7 @@ import { getOrigin } from "@/lib/og";
 import { Link } from "@tanstack/react-router";
 import {
   BarChart2,
-  Brain,
   ChevronRight,
-  FlaskConical,
   KeyRound,
   Link2,
   Plug,
@@ -109,6 +107,26 @@ function TerminalPage() {
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [overlays, setOverlays] = useState({ fib: true, ema: true, rsi: true });
 
+  /* ── Backend tick stream (hosted FastAPI /ws/ticks/{symbol}) ─────────── */
+  const { latestTick } = useBackendTicks(symbolCode, oauth.activeAccount?.token);
+
+  /* Merge backend ticks into the prices map and live-update the last candle */
+  useEffect(() => {
+    if (!latestTick) return;
+    const q = latestTick.quote;
+    setPrices((p) => ({ ...p, [latestTick.symbol]: q }));
+    setCandles((cs) => {
+      if (!cs.length) return cs;
+      const next = cs.slice();
+      const last = { ...next[next.length - 1] };
+      last.close = q;
+      last.high = Math.max(last.high, q);
+      last.low = Math.min(last.low, q);
+      next[next.length - 1] = last;
+      return next;
+    });
+  }, [latestTick]);
+
   /* ── Analysis ────────────────────────────────────────────────────────── */
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -129,7 +147,6 @@ function TerminalPage() {
 
   /* ── Mobile tab switcher ─────────────────────────────────────────────── */
   const [mobileTab, setMobileTab] = useState<MobileTab>("chart");
-
   /* ── Sync OAuth session → WebSocket settings ─────────────────────────── */
   useEffect(() => {
     if (oauth.loading) return;
@@ -358,6 +375,30 @@ function TerminalPage() {
       toast.success(
         `${plan.side} ${plan.lots.toFixed(2)} ${symbol.label}${plan.tripleMode ? " · triple-trade" : ""} executed${lastLatency ? ` (${lastLatency}ms)` : ""}`,
       );
+
+      /* ── Log trade to backend (non-blocking, fire-and-forget) ──────── */
+      const backendUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_BACKEND_URL
+        ?? "https://paltrade-terminal.onrender.com";
+      fetch(`${backendUrl}/api/logs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "paltrade-terminal",
+          category: "trade_executed",
+          account_type: settings.accountType,
+          timestamp: new Date().toISOString(),
+          data: {
+            side: plan.side,
+            symbol: symbol.code,
+            lots: plan.lots,
+            price,
+            latencyMs: lastLatency,
+            contractId: lastContractId,
+            tripleMode: plan.tripleMode,
+            accountId: settings.accountId,
+          },
+        }),
+      }).catch(() => { /* ignore log failures — never block the trade */ });
     } finally {
       setExecuting(false);
     }
@@ -507,7 +548,7 @@ function TerminalPage() {
           </div>
         </div>
 
-        {/* ── Right column ─────────────────────────────────────────────── */}
+        {/* ── Right column — strategy only ─────────────────────────── */}
         <div className={`min-w-0 space-y-4 ${mobileTab === "strategy" ? "block" : "hidden lg:block"}`}>
           <StrategyPanel
             symbol={symbol}
@@ -521,26 +562,7 @@ function TerminalPage() {
             onAnalyze={() => { runAnalysis(); engine.triggerScan(); }}
             onExecute={execute}
           />
-          <AIStrategyAdvisor
-            symbol={symbol}
-            timeframe={timeframe}
-            price={price}
-            balance={account?.balance ?? 10000}
-            analysis={effectiveAnalysis}
-            candles={candles}
-          />
         </div>
-
-        {/* ── Mobile-only backtest tab ─────────────────────────────────── */}
-        {mobileTab === "backtest" && (
-          <div className="min-w-0 lg:hidden">
-            <BacktestPanel
-              symbol={symbol}
-              balance={account?.balance ?? 10000}
-              getCandles={fetchCandles}
-            />
-          </div>
-        )}
       </main>
 
 
@@ -570,7 +592,7 @@ function TerminalPage() {
 }
 
 /* ── MobileTabBar ─────────────────────────────────────────────────────────── */
-type MobileTab = "chart" | "strategy" | "backtest";
+type MobileTab = "chart" | "strategy";
 
 function MobileTabBar({
   activeTab,
@@ -584,9 +606,8 @@ function MobileTabBar({
   onToggleAudio: () => void;
 }) {
   const tabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = [
-    { id: "chart", label: "Chart", icon: <BarChart2 className="h-3.5 w-3.5" /> },
-    { id: "strategy", label: "AI", icon: <Brain className="h-3.5 w-3.5" /> },
-    { id: "backtest", label: "Backtest", icon: <FlaskConical className="h-3.5 w-3.5" /> },
+    { id: "chart",    label: "Chart & Feed",  icon: <BarChart2 className="h-3.5 w-3.5" /> },
+    { id: "strategy", label: "Trade",         icon: <Zap className="h-3.5 w-3.5" /> },
   ];
 
   return (

@@ -81,20 +81,20 @@ function LoginPage() {
             </div>
 
             <h1 className="mt-10 text-3xl font-bold leading-snug" style={{ color: "#f1f5f9" }}>
-              Autonomous trading,<br />
-              <span style={{ color: "#06b6d4" }}>powered by AI.</span>
+              Live Deriv markets,<br />
+              <span style={{ color: "#06b6d4" }}>real-time ticks.</span>
             </h1>
             <p className="mt-3 text-sm leading-relaxed"
               style={{ color: "rgba(148,163,184,0.75)", maxWidth: 340 }}>
-              Connect your Deriv account once. The engine scans markets,
-              detects confluences and executes positions — hands-free.
+              Connect your Deriv account. Live tick data streams directly from
+              Deriv WebSocket — candlesticks, positions and execution all in one terminal.
             </p>
 
             <div className="mt-8 grid grid-cols-3 gap-3">
               {[
-                { value: "84%",   label: "AI Win Rate" },
-                { value: "<85ms", label: "Execution" },
-                { value: "24/7",  label: "Auto-Pilot" },
+                { value: "Live",   label: "Deriv Data" },
+                { value: "1-Click", label: "Execution" },
+                { value: "24/7",   label: "Auto-Pilot" },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl border px-3 py-3 text-center"
                   style={{ borderColor: "rgba(6,182,212,0.15)", background: "rgba(6,182,212,0.04)" }}>

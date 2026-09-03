@@ -2,10 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  Bot,
   RefreshCw,
   Settings,
-  Settings2,
   TrendingDown,
   TrendingUp,
   Wifi,
@@ -99,20 +97,6 @@ export function TerminalHeader({
           <ConnIcon className={`h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 ${status === "connecting" || status === "reconnecting" ? "animate-spin" : ""}`} />
           <span className="hidden xs:inline">{STATUS_LABEL[status]}</span>
         </div>
-
-        <button
-          type="button"
-          aria-label={autoPilot ? "Disable Auto-Pilot" : "Enable Auto-Pilot"}
-          onClick={() => onToggleAutoPilot(!autoPilot)}
-          className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors sm:text-[11px] ${
-            autoPilot
-              ? "border-signal/40 bg-signal/10 text-signal"
-              : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Bot className={`h-3.5 w-3.5 ${autoPilot ? "animate-pulse" : ""}`} />
-          {autoPilot ? "AI on" : "AI off"}
-        </button>
 
         <button
           type="button"
