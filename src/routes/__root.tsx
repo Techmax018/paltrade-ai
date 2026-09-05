@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { captureDerivRedirect } from "../hooks/useDerivOAuth";
-import { GlobalEntryScanner } from "@/components/GlobalEntryScanner";
 
 
 function NotFoundComponent() {
@@ -209,7 +208,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <GlobalEntryScanner />
     </QueryClientProvider>
   );
 }
