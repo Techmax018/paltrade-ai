@@ -98,16 +98,6 @@ export function TerminalHeader({
           <span className="hidden xs:inline">{STATUS_LABEL[status]}</span>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenAutoPilotConfig}
-          aria-label="Auto-Pilot settings"
-          className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/50 px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-signal/50 hover:text-signal sm:text-[11px]"
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Config</span>
-        </button>
-
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
             type="button"

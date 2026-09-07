@@ -14,6 +14,7 @@ interface SnapshotBody {
   recentCandles?: { o: number; h: number; l: number; c: number }[];
   balance?: number;
   clientTimeUtc?: string;
+  serverTimeUtc?: string;
 }
 
 const SCHEMA = {
@@ -110,11 +111,11 @@ export const Route = createFileRoute("/api/ai/strategy")({
         }
 
         const nowUtc = new Date().toISOString();
-        const snapshot = {
+        const snapshot: SnapshotBody = {
           symbol: body.symbol ?? "unknown",
           timeframe: body.timeframe ?? "M5",
-          price: body.price ?? null,
-          balance: body.balance ?? null,
+          price: body.price ?? undefined,
+          balance: body.balance ?? undefined,
           serverTimeUtc: nowUtc,
           clientTimeUtc: body.clientTimeUtc ?? nowUtc,
           analysis: body.analysis ?? {},
